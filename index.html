@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PesaFlow - Micro-Lending & Savings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                DEFAULT: '#10B981', // Emerald 500
+                light: '#6EE7B7',   // Emerald 300
+                dark: '#047857',    // Emerald 700
+              },
+              secondary: {
+                DEFAULT: '#0EA5E9', // Sky 500
+                light: '#7DD3FC',   // Sky 300
+                dark: '#0369A1',    // Sky 700
+              },
+              background: '#F3F4F6', // Gray 100
+              surface: '#FFFFFF',
+              'on-surface': '#1F2937', // Gray 800
+              'on-primary': '#FFFFFF',
+              'dashboard-bg': '#312E81', 
+              'dashboard-card': '#4338CA', 
+              'accent-pink': '#EC4899',
+              'accent-yellow': '#FBBF24',
+              'accent-blue': '#3B82F6',
+              'accent-cyan': '#22D3EE',
+              'accent-green': '#10B981',
+              'accent-red': '#F43F5E',
+              'accent-orange': '#F97316',
+              'dark-bg': '#16161E',
+              'dark-card': '#1E1E28',
+              'dark-text-primary': '#E0E0E0',
+              'dark-text-secondary': '#8A8A93',
+              'dark-border': 'rgba(255, 255, 255, 0.1)',
+              'accent-purple': '#8A6DFF',
+              'accent-lime': '#D4FF41',
+            },
+          },
+        },
+      };
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.13.0",
+    "recharts": "https://esm.sh/recharts@^2.12.7",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^6.23.0",
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "react": "https://esm.sh/react@^19.1.1",
+    "lucide-react": "https://esm.sh/lucide-react@^0.539.0",
+    "jspdf": "https://esm.sh/jspdf@^2.5.1",
+    "jspdf-autotable": "https://esm.sh/jspdf-autotable@^3.8.2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
