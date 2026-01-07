@@ -128,8 +128,8 @@ const RegistrationStep: React.FC<{ setStep: (step: number) => void }> = ({ setSt
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700">PIN (4-6 digits)</label>
-                <input type="text" name="pin" inputMode="numeric" pattern="[0-9]{4,6}" maxLength={6} required className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
+                <label className="block text-sm font-medium text-gray-700">PIN (4 digits)</label>
+                <input type="text" name="pin" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} required className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
             </div>
 
             <button type="submit" disabled={loading} className="w-full flex justify-center items-center bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-md transition-colors duration-300 disabled:bg-primary-light">
