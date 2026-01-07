@@ -273,11 +273,21 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string }> =
     const formatTransactionDate = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(now.getDate() - 1);
+
         const diffMs = now.getTime() - date.getTime();
         const diffMin = Math.floor(diffMs / 60000);
 
         if (diffMin < 1) return 'now';
-        if (diffMin < 60) return `${diffMin}m ago`;
+
+        const isToday = date.toDateString() === now.toDateString();
+        const isYesterday = date.toDateString() === yesterday.toDateString();
+
+        const timeString = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+
+        if (isToday) return timeString;
+        if (isYesterday) return `Yesterday at ${timeString}`;
         
         // Return format like "Jan 5 at 10:21 AM"
         return date.toLocaleString('en-US', {
