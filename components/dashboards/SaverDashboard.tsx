@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -270,6 +269,26 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string }> =
             default: return 'bg-gray-100 text-gray-600';
         }
     };
+
+    const formatTransactionDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMin = Math.floor(diffMs / 60000);
+
+        if (diffMin < 1) return 'now';
+        if (diffMin < 60) return `${diffMin}m ago`;
+        
+        // Return format like "Jan 5 at 10:21 AM"
+        return date.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        }).replace(',', ' at');
+    };
+
     return (
         <Card>
             <h3 className="font-bold text-lg text-gray-800 mb-4">Linked Cards</h3>
@@ -290,7 +309,7 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string }> =
                     <div key={tx.id} className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className={`w-12 h-12 flex items-center justify-center rounded-full ${getStatusColor(tx.status)} transition-transform hover:scale-110`}>{tx.paymentType === 'SAVING' ? <PiggyBank size={22} /> : <Wallet size={22} />}</div>
-                            <div><p className="font-bold text-gray-800 text-sm line-clamp-1" title={tx.description}>{tx.description}</p><p className="text-xs text-gray-500 mt-1">{new Date(tx.transactionDate).toLocaleDateString()}</p></div>
+                            <div><p className="font-bold text-gray-800 text-sm line-clamp-1" title={tx.description}>{tx.description}</p><p className="text-xs text-gray-500 mt-1">{formatTransactionDate(tx.transactionDate)}</p></div>
                         </div>
                         <p className={`font-bold text-sm ${tx.transactionType === 'INCOME' ? 'text-green-600' : 'text-gray-800'}`}>{tx.transactionType === 'INCOME' ? '+' : '-'}{currency} {tx.amount.toLocaleString()}</p>
                     </div>
