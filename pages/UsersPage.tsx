@@ -138,7 +138,7 @@ const UserCell: React.FC<{ user: UserData['user'] }> = ({ user }) => (
         <img 
             src={user.avatar || getShadowPlaceholder(user.gender)} 
             alt={user.name} 
-            className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-100" 
+            className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-100 shadow-sm" 
             onError={(e) => {
                 (e.target as HTMLImageElement).src = getShadowPlaceholder(user.gender);
             }}
@@ -549,7 +549,7 @@ const UsersPage: React.FC = () => {
                     loading={statsLoading}
                  />
                  <StatCard 
-                    title="Pending Users" 
+                    title="Inactive Users" 
                     value={stats?.pendingUsersCount || 0} 
                     change={stats?.pendingUsersGrowth || 0} 
                     icon={<UserX size={20} className="text-yellow-500"/>} 

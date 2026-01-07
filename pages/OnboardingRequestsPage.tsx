@@ -86,7 +86,7 @@ const StatusPill: React.FC<{ status: OnboardingStatus }> = ({ status }) => {
 const UserCell: React.FC<{ user: OnboardingRequest['user'] }> = ({ user }) => (
     <div className="flex items-center">
         <img 
-            src={user.avatar || getShadowPlaceholder(user.gender)} 
+            src={getShadowPlaceholder(user.gender)} 
             alt={`${user.firstName} ${user.lastName}`} 
             className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-100 shadow-sm" 
             onError={(e) => {
@@ -219,7 +219,7 @@ const OnboardingRequestsPage: React.FC = () => {
                         firstName: item.entityMetadata.firstName || '',
                         lastName: item.entityMetadata.lastName || '',
                         phone: item.entityMetadata.phoneNumber || item.entityMetadata.mobileWallet || 'N/A',
-                        avatar: `https://i.pravatar.cc/150?u=${item.entityMetadata.username || 'user'}`,
+                        avatar: null, // Force null to use placeholder
                         email: item.entityMetadata.email,
                         gender: item.entityMetadata.gender
                     },
