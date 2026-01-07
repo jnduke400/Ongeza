@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,6 +17,8 @@ interface WithdrawalTransaction {
     type: string;
     paymentType: string;
     status: string;
+    accountNumber: string;
+    msisdn: string;
 }
 
 type SortableKeys = keyof WithdrawalTransaction;
@@ -413,7 +414,7 @@ const WithdrawalsPage: React.FC = () => {
 
                 {/* Table */}
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[1000px] text-left text-sm">
+                    <table className="w-full min-w-[1200px] text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-200">
                                 <th className="p-4 w-12">
@@ -428,6 +429,8 @@ const WithdrawalsPage: React.FC = () => {
                                 </th>
                                 <th className="p-4 font-semibold"><SortableTableHeader label="Transaction ID" columnKey="transactionId" sortConfig={sortConfig} requestSort={requestSort} /></th>
                                 <th className="p-4 font-semibold"><SortableTableHeader label="Date" columnKey="formattedDate" sortConfig={sortConfig} requestSort={requestSort} /></th>
+                                <th className="p-4 font-semibold"><SortableTableHeader label="Account" columnKey="accountNumber" sortConfig={sortConfig} requestSort={requestSort} /></th>
+                                <th className="p-4 font-semibold"><SortableTableHeader label="Phone" columnKey="msisdn" sortConfig={sortConfig} requestSort={requestSort} /></th>
                                 <th className="p-4 font-semibold"><SortableTableHeader label="Channel" columnKey="channel" sortConfig={sortConfig} requestSort={requestSort} /></th>
                                 <th className="p-4 font-semibold"><SortableTableHeader label="Amount" columnKey="amount" sortConfig={sortConfig} requestSort={requestSort} /></th>
                                 <th className="p-4 font-semibold"><SortableTableHeader label="Type" columnKey="type" sortConfig={sortConfig} requestSort={requestSort} /></th>
@@ -443,6 +446,8 @@ const WithdrawalsPage: React.FC = () => {
                                         <td className="p-4"><div className="h-4 bg-gray-200 rounded w-4"></div></td>
                                         <td className="p-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
                                         <td className="p-4"><div className="h-4 bg-gray-200 rounded w-32"></div></td>
+                                        <td className="p-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                                        <td className="p-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
                                         <td className="p-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
                                         <td className="p-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
                                         <td className="p-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
@@ -464,6 +469,8 @@ const WithdrawalsPage: React.FC = () => {
                                     </td>
                                     <td className="p-4 text-gray-500">{tx.transactionId}</td>
                                     <td className="p-4 text-gray-500">{tx.formattedDate}</td>
+                                    <td className="p-4 text-gray-500 font-medium">{tx.accountNumber}</td>
+                                    <td className="p-4 text-gray-500">{tx.msisdn}</td>
                                     <td className="p-4"><ChannelCell name={tx.channel} /></td>
                                     <td className="p-4 font-bold text-gray-800">TZS {tx.amount.toLocaleString()}</td>
                                     <td className="p-4">
@@ -533,7 +540,7 @@ const WithdrawalsPage: React.FC = () => {
                         <button onClick={() => setCurrentPage(prev => prev + 1)} disabled={currentPage === totalPages || totalPages === 0} className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-primary disabled:opacity-50 disabled:text-gray-400"><ChevronRight size={18} /></button>
                     </div>
                 </div>
-            </div>
+                </div>
             </div>
         </>
     );

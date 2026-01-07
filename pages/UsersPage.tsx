@@ -1,26 +1,9 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    ChevronDown,
-    ChevronUp,
-    Download,
-    MoreVertical,
-    Search,
-    ChevronLeft,
-    ChevronRight,
-    Plus,
-    Trash2,
-    Eye,
-    Upload,
-    Users,
-    UserCheck,
-    UserX,
-    TrendingUp,
-    Edit,
-    Loader2,
-    Calendar,
-    X,
-    SlidersHorizontal,
+    ChevronDown, ChevronUp, Download, MoreVertical, Search, ChevronLeft, ChevronRight, Plus,
+    Trash2, Eye, Upload, Users, UserCheck, UserX, TrendingUp, Edit, Loader2, Calendar,
+    X, SlidersHorizontal,
 } from 'lucide-react';
 import { UserForManagement, ApiRole } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
@@ -41,9 +24,7 @@ interface UserStats {
 }
 
 const formatApiString = (str: string | null | undefined): string => {
-  if (!str) {
-    return '';
-  }
+  if (!str) return '';
   return str
     .replace('ROLE_', '')
     .replace(/_/g, ' ')
@@ -71,6 +52,13 @@ const formatPhoneNumber = (phone: string): string => {
         return `${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7, 10)}`;
     }
     return phone; 
+};
+
+// Helper to get gender-specific shadow placeholder matching requested silhouettes
+const getShadowPlaceholder = (gender?: string) => {
+    const isFemale = gender?.toUpperCase() === 'FEMALE';
+    if (isFemale) return 'https://ui-avatars.com/api/?name=F&background=E2E8F0&color=94A3B8&size=150&bold=true';
+    return 'https://ui-avatars.com/api/?name=M&background=E2E8F0&color=94A3B8&size=150&bold=true';
 };
 
 const StatCard: React.FC<{
@@ -147,7 +135,14 @@ const RoleCell: React.FC<{ role: UserData['role'] }> = ({ role }) => {
 
 const UserCell: React.FC<{ user: UserData['user'] }> = ({ user }) => (
     <div className="flex items-center">
-        <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover mr-3" />
+        <img 
+            src={user.avatar || getShadowPlaceholder(user.gender)} 
+            alt={user.name} 
+            className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-100" 
+            onError={(e) => {
+                (e.target as HTMLImageElement).src = getShadowPlaceholder(user.gender);
+            }}
+        />
         <div>
             <p className="font-semibold text-gray-800">{user.name}</p>
             <p className="text-xs text-gray-500">{user.email}</p>
@@ -367,7 +362,8 @@ const UsersPage: React.FC = () => {
                     user: {
                         name: `${apiUser.firstName} ${apiUser.lastName}`,
                         email: apiUser.email,
-                        avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : `https://i.pravatar.cc/150?u=${apiUser.username}`,
+                        avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : getShadowPlaceholder(apiUser.gender),
+                        gender: apiUser.gender,
                     },
                     role: formatApiString(apiUser.roleName) as UserData['role'],
                     category: formatApiString(apiUser.userCategory) as UserData['category'] || 'Saver',
@@ -443,6 +439,7 @@ const UsersPage: React.FC = () => {
     const clearFilters = () => {
         setFilters({ role: '', category: '', status: '' });
         setSearchQuery('');
+        setDebouncedSearchQuery('');
         setDateFilter(null);
         setCurrentPage(1);
     };
@@ -466,7 +463,6 @@ const UsersPage: React.FC = () => {
         try {
             const params = new URLSearchParams();
             
-            // Removing empty query parameters as requested
             if (debouncedSearchQuery) params.append('search', debouncedSearchQuery);
             if (filters.status) params.append('status', filters.status.toUpperCase());
             if (filters.category) params.append('userCategory', filters.category);

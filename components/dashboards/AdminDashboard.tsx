@@ -1,5 +1,5 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
     Wallet, PiggyBank, Briefcase, CreditCard, MoreVertical, ArrowUpRight, ArrowDownRight,
@@ -23,6 +23,7 @@ interface RecentNotification {
     userCategory: string;
     profilePictureUrl: string | null;
     createdAt: string;
+    gender?: string;
 }
 
 interface TodoItem {
@@ -57,6 +58,13 @@ const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
         {children}
     </div>
 );
+
+// Helper for shadow placeholders
+const getShadowPlaceholder = (gender?: string) => {
+    const isFemale = gender?.toUpperCase() === 'FEMALE';
+    if (isFemale) return 'https://ui-avatars.com/api/?name=F&background=E2E8F0&color=94A3B8&size=150&bold=true';
+    return 'https://ui-avatars.com/api/?name=M&background=E2E8F0&color=94A3B8&size=150&bold=true';
+};
 
 // Top row summary cards
 const TopStatCard: React.FC<{
@@ -229,21 +237,15 @@ const RecentRequestsCard: React.FC<{ notifications: RecentNotification[] }> = ({
                     notifications.map((n, index) => (
                         <div key={index} className="flex items-center justify-between">
                             <div className="flex items-center">
-                                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mr-4 flex-shrink-0 overflow-hidden">
-                                    {n.profilePictureUrl ? (
-                                        <img 
-                                            src={`${API_BASE_URL}${n.profilePictureUrl}`} 
-                                            alt={n.fullName} 
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).src = 'https://i.pravatar.cc/150?u=shadow';
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-slate-300 flex items-center justify-center text-slate-500">
-                                            <User size={24} />
-                                        </div>
-                                    )}
+                                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mr-4 flex-shrink-0 overflow-hidden border border-gray-50 shadow-sm">
+                                    <img 
+                                        src={n.profilePictureUrl ? `${API_BASE_URL}${n.profilePictureUrl}` : getShadowPlaceholder(n.gender)} 
+                                        alt={n.fullName} 
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = getShadowPlaceholder(n.gender);
+                                        }}
+                                    />
                                 </div>
                                 <div className="min-w-0">
                                     <p className="font-bold text-[#1e293b] text-base truncate">{n.fullName}</p>
@@ -262,25 +264,32 @@ const RecentRequestsCard: React.FC<{ notifications: RecentNotification[] }> = ({
 };
 
 
-const FormationStatusCard: React.FC<{ progress: number; estimatedDays: number }> = ({ progress, estimatedDays }) => (
-    <div className="bg-gray-800 text-white p-6 rounded-2xl shadow-lg">
-        <h3 className="font-bold text-lg">Onboarding Approval</h3>
-        <p className="text-sm text-gray-400 mt-1">In progress</p>
-        
-        <div className="w-full bg-gray-600 rounded-full h-2.5 my-4">
-            <div className="bg-white h-2.5 rounded-full transition-all duration-1000" style={{ width: `${progress}%` }}></div>
-        </div>
+const FormationStatusCard: React.FC<{ progress: number; estimatedDays: number }> = ({ progress, estimatedDays }) => {
+    const navigate = useNavigate();
 
-        <div className="text-center text-sm text-gray-300">
-            <p>Estimated processing</p>
-            <p className="font-semibold">{estimatedDays} business days</p>
-        </div>
+    return (
+        <div className="bg-gray-800 text-white p-6 rounded-2xl shadow-lg">
+            <h3 className="font-bold text-lg">Onboarding Approval</h3>
+            <p className="text-sm text-gray-400 mt-1">In progress</p>
+            
+            <div className="w-full bg-gray-600 rounded-full h-2.5 my-4">
+                <div className="bg-white h-2.5 rounded-full transition-all duration-1000" style={{ width: `${progress}%` }}></div>
+            </div>
 
-        <button className="w-full mt-5 bg-white text-gray-800 font-bold py-2.5 px-4 rounded-lg hover:bg-gray-100 transition-colors">
-            View Approvals
-        </button>
-    </div>
-);
+            <div className="text-center text-sm text-gray-300">
+                <p>Estimated processing</p>
+                <p className="font-semibold">{estimatedDays} business days</p>
+            </div>
+
+            <button 
+                onClick={() => navigate('/onboarding/requests')}
+                className="w-full mt-5 bg-white text-gray-800 font-bold py-2.5 px-4 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+                View Approvals
+            </button>
+        </div>
+    );
+};
 
 const ToDoList: React.FC<{ todos: TodoItem[] }> = ({ todos }) => {
     const formatDate = (dateStr: string) => {

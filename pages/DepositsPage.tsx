@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
     ChevronUp, ChevronDown, SlidersHorizontal, X, Wallet, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Search, Download, TrendingUp, FileText, Loader2, XCircle
@@ -248,7 +247,7 @@ const DepositsPage: React.FC = () => {
                                 placeholder="Search deposits..."
                                 value={searchQuery}
                                 onChange={handleSearchChange}
-                                className="pl-9 pr-3 py-2 border border-gray-200 rounded-md text-sm w-48 focus:outline-none focus:ring-1 focus:ring-primary"
+                                className="pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm w-48 focus:outline-none focus:ring-1 focus:ring-primary"
                             />
                         </div>
                         <button 
@@ -280,17 +279,17 @@ const DepositsPage: React.FC = () => {
                         </div>
                     )}
                     
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm min-w-[1400px]">
                         <thead className="border-b-2 border-gray-100 bg-gray-50/50">
                              <tr>
                                 <SortableTableHeader label="Request Time" columnKey="requestTime" sortConfig={sortConfig} requestSort={requestSort} />
                                 <SortableTableHeader label="Name" columnKey="name" sortConfig={sortConfig} requestSort={requestSort} />
                                 <SortableTableHeader label="Account" columnKey="accountNumber" sortConfig={sortConfig} requestSort={requestSort} />
+                                <SortableTableHeader label="Phone" columnKey="phoneNumber" sortConfig={sortConfig} requestSort={requestSort} />
                                 <SortableTableHeader label="Reference" columnKey="reference" sortConfig={sortConfig} requestSort={requestSort} />
-                                <SortableTableHeader label="Phone Number" columnKey="phoneNumber" sortConfig={sortConfig} requestSort={requestSort} />
                                 <SortableTableHeader label="Receipt Number" columnKey="receiptNumber" sortConfig={sortConfig} requestSort={requestSort} />
-                                <SortableTableHeader label="Channel" columnKey="channel" sortConfig={sortConfig} requestSort={requestSort} />
-                                <SortableTableHeader label="Amount" columnKey="amount" sortConfig={sortConfig} requestSort={requestSort} />
+                                <SortableTableHeader label="Channel" columnKey="channel" sortConfig={sortConfig} requestSort={requestSort} className="min-w-[160px]" />
+                                <SortableTableHeader label="Amount" columnKey="amount" sortConfig={sortConfig} requestSort={requestSort} className="min-w-[180px]" />
                                 <th className="p-4"></th>
                             </tr>
                         </thead>
@@ -301,13 +300,13 @@ const DepositsPage: React.FC = () => {
                                         <td className="p-4 text-gray-600 whitespace-nowrap">{deposit.formattedRequestTime}</td>
                                         <td className="p-4 font-medium text-gray-800">{deposit.name}</td>
                                         <td className="p-4 text-gray-600">{deposit.accountNumber}</td>
+                                        <td className="p-4 text-gray-600 font-medium">{deposit.phoneNumber || 'N/A'}</td>
                                         <td className="p-4 font-medium text-gray-800">{deposit.reference}</td>
-                                        <td className="p-4 text-gray-600">{deposit.phoneNumber || 'N/A'}</td>
                                         <td className="p-4 text-gray-600 font-mono text-xs">{deposit.receiptNumber}</td>
                                         <td className="p-4">
-                                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-semibold uppercase">{deposit.channel}</span>
+                                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-semibold uppercase whitespace-nowrap">{deposit.channel}</span>
                                         </td>
-                                        <td className="p-4 font-bold text-gray-900">TZS {deposit.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        <td className="p-4 font-bold text-gray-900 whitespace-nowrap">TZS {deposit.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td className="p-4 text-right">
                                             <button className="text-gray-400 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-all">
                                                 <Wallet size={18}/>

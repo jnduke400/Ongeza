@@ -27,6 +27,7 @@ import GroupTransactionDetailsPage from './pages/GroupTransactionDetailsPage';
 import GroupSummaryReportPage from './pages/GroupSummaryReportPage';
 import GoalSummaryReportPage from './pages/GoalSummaryReportPage';
 import SettingsPage from './pages/SettingsPage';
+import ModuleConfigsPage from './pages/ModuleConfigsPage';
 import ProfilePage from './pages/ProfilePage';
 import UsersPage from './pages/UsersPage';
 import UserDetailPage from './pages/UserDetailPage';
@@ -425,6 +426,16 @@ const AppContent: React.FC = () => {
                     <ProtectedRoute>
                         <DashboardLayout>
                             <SettingsPage />
+                        </DashboardLayout>
+                    </ProtectedRoute>
+                } 
+            />
+            <Route 
+                path="/configurations/module-configs" 
+                element={
+                    <ProtectedRoute>
+                        <DashboardLayout>
+                            <ModuleConfigsPage />
                         </DashboardLayout>
                     </ProtectedRoute>
                 } 

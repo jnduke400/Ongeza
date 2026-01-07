@@ -1,6 +1,3 @@
-// FIX: Removed self-import of UserRole to resolve declaration conflict.
-
-
 export enum UserRole {
   Borrower = 'borrower',
   Saver = 'saver',
@@ -42,6 +39,7 @@ export interface OnboardingRequest {
     phone: string;
     avatar: string;
     email?: string;
+    gender?: string;
   };
   type: OnboardingType;
   submissionDate: string; // ISO String
@@ -112,6 +110,7 @@ export interface User {
   goalAchievementRate?: number;
   loginCount?: number;
   currency?: string;
+  gender?: string;
 }
 
 export interface LoanApplication {
@@ -264,6 +263,7 @@ export interface UserForManagement {
     name: string;
     email: string;
     avatar: string;
+    gender?: string;
   };
   role: 'Admin' | 'Manager' | 'User' | 'Maintainer' | 'Author' | 'Investor';
   category: 'Borrower' | 'Saver' | 'Group Admin' | 'Admin' | 'Investor';
@@ -469,6 +469,7 @@ export interface ApiRole {
   updatedAt: string;
   permissionCount: number;
   userCount: number;
+  profilePictureUrls: string[];
 }
 
 export interface ApiPermission {

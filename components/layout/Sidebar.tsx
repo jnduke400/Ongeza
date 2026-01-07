@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 // FIX: Using namespace import for react-router-dom to handle potential module resolution issues.
 import { Link, useLocation } from 'react-router-dom';
@@ -310,7 +309,7 @@ const Sidebar: React.FC<{
                 label: 'Configurations',
                 icon: <Settings size={20} />,
                 children: [
-                    { href: '/settings', label: 'Module Configs' },
+                    { href: '/configurations/module-configs', label: 'Module Configs' },
                     { href: '/configurations/modules', label: 'Modules' },
                     { href: '/configurations/document-types', label: 'Document Types' },
                     { href: '/configurations/document-groups', label: 'Document Groups' },

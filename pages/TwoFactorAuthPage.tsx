@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CircleDollarSign } from 'lucide-react';
+import { CircleDollarSign, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../services/apiConfig';
 
 const DotPattern = () => (
     <div className="absolute w-48 h-48 -z-10">
@@ -16,7 +17,9 @@ const DotPattern = () => (
 const TwoFactorAuthPage: React.FC = () => {
     const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
     const [loading, setLoading] = useState(false);
+    const [isResending, setIsResending] = useState(false);
     const [error, setError] = useState('');
+    const [resendSuccess, setResendSuccess] = useState('');
     const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
     const location = useLocation();
     const navigate = useNavigate();
@@ -40,6 +43,7 @@ const TwoFactorAuthPage: React.FC = () => {
             newOtp[index] = value;
             setOtp(newOtp);
             setError('');
+            setResendSuccess('');
             if (value && index < 5) {
                 inputsRef.current[index + 1]?.focus();
             }
@@ -65,6 +69,36 @@ const TwoFactorAuthPage: React.FC = () => {
         }
     };
 
+    const handleResend = async () => {
+        if (!challengeId || isResending) return;
+        
+        setIsResending(true);
+        setError('');
+        setResendSuccess('');
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/auth/resend-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ challengeId }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                setResendSuccess(data.message || 'OTP has been resent successfully');
+                setOtp(Array(6).fill(''));
+                inputsRef.current[0]?.focus();
+            } else {
+                throw new Error(data.message || 'Failed to resend code');
+            }
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsResending(false);
+        }
+    };
+
     const handleVerify = async () => {
         const fullOtp = otp.join('');
         if (fullOtp.length !== 6 || !challengeId) {
@@ -74,6 +108,7 @@ const TwoFactorAuthPage: React.FC = () => {
 
         setLoading(true);
         setError('');
+        setResendSuccess('');
 
         const result = await verifyLoginOtp(challengeId, fullOtp);
 
@@ -82,7 +117,6 @@ const TwoFactorAuthPage: React.FC = () => {
             setOtp(Array(6).fill(''));
             inputsRef.current[0]?.focus();
         }
-        // On success, the AuthContext handles navigation.
         setLoading(false);
     };
     
@@ -119,19 +153,26 @@ const TwoFactorAuthPage: React.FC = () => {
                             onChange={e => handleChange(e, index)}
                             onKeyDown={e => handleKeyDown(e, index)}
                             className="w-12 h-14 text-center text-2xl font-semibold bg-gray-50 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition"
-                            disabled={loading || !challengeId}
+                            disabled={loading || isResending || !challengeId}
                         />
                     ))}
                 </div>
-                {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
+                {error && <p className="text-red-500 text-sm text-center mt-4 font-medium">{error}</p>}
+                {resendSuccess && <p className="text-green-600 text-sm text-center mt-4 font-medium">{resendSuccess}</p>}
+                
                 <div className="mt-6">
-                    <button onClick={handleVerify} disabled={loading || otp.join('').length !== 6} className="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-primary-dark transition-all duration-300 flex justify-center items-center disabled:bg-primary/70">
+                    <button onClick={handleVerify} disabled={loading || isResending || otp.join('').length !== 6} className="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-primary-dark transition-all duration-300 flex justify-center items-center disabled:bg-primary/70">
                         {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : 'Verify'}
                     </button>
                 </div>
                  <p className="mt-8 text-center text-sm text-gray-600">
                     Didn't receive a code?{' '}
-                    <button className="font-medium text-primary hover:text-primary-dark">
+                    <button 
+                        onClick={handleResend}
+                        disabled={loading || isResending}
+                        className="font-medium text-primary hover:text-primary-dark disabled:opacity-50 flex items-center justify-center mx-auto"
+                    >
+                        {isResending ? <Loader2 className="animate-spin mr-1" size={14} /> : null}
                         Resend Code
                     </button>
                 </p>

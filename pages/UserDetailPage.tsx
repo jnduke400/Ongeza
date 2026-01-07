@@ -39,6 +39,13 @@ const getGoalIcon = (iconStr: string | null) => {
     }
 };
 
+// Helper to get gender-specific shadow placeholder matching requested silhouettes
+const getShadowPlaceholder = (gender?: string) => {
+    const isFemale = gender?.toUpperCase() === 'FEMALE';
+    if (isFemale) return 'https://ui-avatars.com/api/?name=F&background=E2E8F0&color=94A3B8&size=150&bold=true';
+    return 'https://ui-avatars.com/api/?name=M&background=E2E8F0&color=94A3B8&size=150&bold=true';
+};
+
 const TabButton: React.FC<{
     icon: React.ReactNode;
     label: string;
@@ -160,7 +167,14 @@ const UserInfoCard: React.FC<{
             <div className="flex-grow">
                 <div className="flex flex-col items-center text-center">
                     <div className="relative mb-4">
-                        <img src={user.user.avatar} alt={user.user.name} className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-sm" />
+                        <img 
+                            src={user.user.avatar || getShadowPlaceholder(user.user.gender)} 
+                            alt={user.user.name} 
+                            className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-sm"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = getShadowPlaceholder(user.user.gender);
+                            }}
+                        />
                         <span className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-surface ${isActive ? 'bg-green-500' : isSuspended ? 'bg-red-500' : 'bg-gray-400'}`}></span>
                     </div>
                     <h2 className="text-2xl font-bold text-gray-800">{user.user.name}</h2>
@@ -294,7 +308,7 @@ const GoalsList: React.FC<{
     return (
          <div className="bg-surface p-6 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex flex-wrap justify-between items-center mb-8 gap-4">
-                <h3 className="font-bold text-2xl text-gray-800">Goals List</h3>
+                <h3 className="font-bold text-lg text-gray-800">Goals List</h3>
                 <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
                         <span>Show</span>
@@ -324,7 +338,7 @@ const GoalsList: React.FC<{
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[700px] text-sm text-left">
                     <thead>
-                        <tr className="border-b border-gray-200 text-[11px] text-gray-400 uppercase tracking-widest font-bold">
+                        <tr className="border-b border-gray-200 text-gray-500">
                             <th className="pb-4 w-12 text-center">
                                 <input 
                                     type="checkbox" 
@@ -333,9 +347,9 @@ const GoalsList: React.FC<{
                                     checked={goals.length > 0 && selectedRows.length === goals.length}
                                 />
                             </th>
-                            <th className="pb-4 px-4">GOAL</th>
-                            <th className="pb-4 px-4">PROGRESS</th>
-                            <th className="pb-4 px-4 text-center">ACTION</th>
+                            <th className="pb-4 px-4 font-semibold uppercase text-xs">GOAL</th>
+                            <th className="pb-4 px-4 font-semibold uppercase text-xs">PROGRESS</th>
+                            <th className="pb-4 px-4 text-center font-semibold uppercase text-xs">ACTION</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -344,7 +358,7 @@ const GoalsList: React.FC<{
                                 <tr key={i} className="animate-pulse">
                                     <td className="py-6"><div className="h-4 bg-gray-100 rounded w-4 mx-auto"></div></td>
                                     <td className="py-6"><div className="h-10 bg-gray-100 rounded w-48"></div></td>
-                                    <td className="py-6"><div className="h-4 bg-gray-100 rounded w-32"></div></td>
+                                    <td className="py-6"><div className="h-4 bg-gray-200 rounded w-32"></div></td>
                                     <td className="py-6"><div className="h-8 bg-gray-100 rounded-full w-8 mx-auto"></div></td>
                                 </tr>
                             ))
@@ -364,8 +378,8 @@ const GoalsList: React.FC<{
                                             {getGoalIcon(goal.icon)}
                                         </div>
                                         <div>
-                                            <p className="font-bold text-[15px] text-gray-800 leading-tight">{goal.goalName}</p>
-                                            <p className="text-[13px] text-gray-400 mt-0.5">Target: TZS {goal.targetAmount.toLocaleString()}</p>
+                                            <p className="font-medium text-gray-800 leading-tight">{goal.goalName}</p>
+                                            <p className="font-medium text-gray-600 mt-0.5">Target: TZS {goal.targetAmount.toLocaleString()}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -377,7 +391,7 @@ const GoalsList: React.FC<{
                                                 style={{ width: `${goal.progress}%` }}
                                             ></div>
                                         </div>
-                                        <span className="font-semibold text-gray-600 w-10 text-right">{Math.round(goal.progress)}%</span>
+                                        <span className="font-bold text-gray-700 w-10 text-right">{Math.round(goal.progress)}%</span>
                                     </div>
                                 </td>
                                 <td className="py-4 px-4 text-center">
@@ -393,7 +407,7 @@ const GoalsList: React.FC<{
                 </table>
             </div>
 
-            <div className="flex flex-wrap justify-between items-center mt-6 pt-6 border-t border-gray-100 gap-4 text-sm text-gray-400 font-medium">
+            <div className="flex flex-wrap justify-between items-center mt-6 pt-6 border-t border-gray-100 gap-4 text-sm text-gray-500 font-medium">
                 <p>Showing 1 to {Math.min(entriesToShow, pagination.totalElements)} of {pagination.totalElements} entries</p>
                 <div className="flex items-center space-x-1">
                     <button className="p-2 text-gray-300 hover:text-gray-600 transition-colors disabled:opacity-30" disabled>
@@ -495,7 +509,7 @@ const SecurityTabContent: React.FC<{
                 
                 <div className="flex items-center justify-between bg-gray-50 p-5 rounded-xl border border-gray-200">
                     <div className="flex items-center space-x-4">
-                        <div className={`p-3 rounded-full shadow-sm ${pinSet ? 'bg-green-100 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                        <div className={`p-3 rounded-full shadow-sm ${pinSet ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
                             {pinSet ? <CheckCircle size={24} /> : <AlertTriangle size={24} />} 
                         </div>
                         <div>
@@ -506,7 +520,7 @@ const SecurityTabContent: React.FC<{
                         </div>
                     </div>
                     <button 
-                        onClick={handleResetPinInitiate}
+                        onClick={handleResetPinInitiate} 
                         disabled={!pinSet || isResetting}
                         className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-all flex items-center ${
                             !pinSet || isResetting 
@@ -526,7 +540,7 @@ const SecurityTabContent: React.FC<{
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-100 tracking-wider">
+                            <tr className="text-left text-xs text-gray-500 uppercase border-b border-gray-100 tracking-wider">
                                 <th className="pb-3 px-4 font-bold">Browser</th>
                                 <th className="pb-3 px-4 font-bold">Device</th>
                                 <th className="pb-3 px-4 font-bold">Recent Activity</th>
@@ -620,42 +634,6 @@ const SecurityTabContent: React.FC<{
     );
 };
 
-const PayableLoanTabContent: React.FC = () => {
-    return (
-        <div className="space-y-6">
-            <div className={`bg-surface p-6 rounded-2xl shadow-sm border border-gray-100`}>
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Financial Status</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                        <p className="text-sm font-bold text-gray-700">Active Loan Account</p>
-                        <p className="text-xs text-gray-500 mt-1">Status and repayment overview for the borrower.</p>
-                        <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                             <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Total Outstanding</p>
-                             <p className="text-2xl font-black text-gray-800 mt-1">TZS 350,000</p>
-                             <div className="mt-3 flex items-center text-xs">
-                                <span className="bg-primary/10 text-primary px-2 py-0.5 rounded font-bold uppercase">On Track</span>
-                                <span className="text-gray-400 ml-2 italic">Next due Jan 15, 2026</span>
-                             </div>
-                        </div>
-                    </div>
-                    <div className="flex items-center">
-                        <div className="bg-amber-50 border border-amber-100 text-amber-800 p-5 rounded-xl w-full">
-                            <div className="flex items-center space-x-3">
-                                <AlertTriangle className="text-amber-500" />
-                                <p className="font-bold">Repayment Warning</p>
-                            </div>
-                            <p className="text-sm mt-2 font-medium opacity-80">This user had a delayed payment last month. High risk assessment recommended for future limit increases.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="text-center py-12 text-gray-400 italic bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200">
-                 Detailed repayment logs and history are being generated...
-            </div>
-        </div>
-    );
-};
-
 
 const UserDetailPage: React.FC = () => {
     const { userId } = useParams<{ userId: string }>();
@@ -736,7 +714,8 @@ const UserDetailPage: React.FC = () => {
                 user: {
                     name: `${apiUser.firstName} ${apiUser.lastName}`,
                     email: apiUser.email,
-                    avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : `https://i.pravatar.cc/150?u=${apiUser.username}`,
+                    avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : getShadowPlaceholder(apiUser.gender),
+                    gender: apiUser.gender,
                 },
                 role: roleName as any,
                 category: apiUser.userCategory as any,
@@ -826,8 +805,6 @@ const UserDetailPage: React.FC = () => {
     const TABS = [
         { id: 'Goals', icon: <Target size={18} />, label: 'Goals' },
         { id: 'Security', icon: <Shield size={18} />, label: 'Security' },
-        { id: 'Payable Loan', icon: <DollarSign size={18} />, label: 'Financials' },
-        { id: 'Notifications', icon: <Bell size={18} />, label: 'Alerts' },
     ];
 
     const renderContent = () => {
@@ -847,16 +824,8 @@ const UserDetailPage: React.FC = () => {
                 );
             case 'Security':
                 return <SecurityTabContent pinSet={user.pinSet || false} userId={user.id} onPinReset={fetchUserData} />;
-            case 'Payable Loan':
-                return <PayableLoanTabContent />;
             default:
-                return (
-                    <div className="p-12 text-center bg-gray-50 rounded-2xl mt-6 border-2 border-dashed border-gray-200">
-                        <Bell className="mx-auto text-gray-300 mb-4" size={48} />
-                        <h3 className="text-xl font-bold text-gray-700">Detailed logs for {activeTab}</h3>
-                        <p className="text-sm text-gray-400 mt-2">Communication history and system alerts will be displayed here.</p>
-                    </div>
-                );
+                return null;
         }
     };
 

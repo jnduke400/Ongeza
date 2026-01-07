@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { OnboardingRequest, OnboardingStatus, OnboardingType } from '../types';
@@ -11,6 +10,13 @@ const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
         {children}
     </div>
 );
+
+// Helper to get gender-specific shadow placeholder
+const getShadowPlaceholder = (gender?: string) => {
+    const isFemale = gender?.toUpperCase() === 'FEMALE';
+    if (isFemale) return 'https://ui-avatars.com/api/?name=F&background=E2E8F0&color=94A3B8&size=150&bold=true';
+    return 'https://ui-avatars.com/api/?name=M&background=E2E8F0&color=94A3B8&size=150&bold=true';
+};
 
 const OnboardingIllustrationCard: React.FC = () => {
     return (
@@ -79,7 +85,14 @@ const StatusPill: React.FC<{ status: OnboardingStatus }> = ({ status }) => {
 
 const UserCell: React.FC<{ user: OnboardingRequest['user'] }> = ({ user }) => (
     <div className="flex items-center">
-        <img src={user.avatar} alt={`${user.firstName} ${user.lastName}`} className="w-10 h-10 rounded-full object-cover mr-3" />
+        <img 
+            src={user.avatar || getShadowPlaceholder(user.gender)} 
+            alt={`${user.firstName} ${user.lastName}`} 
+            className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-100 shadow-sm" 
+            onError={(e) => {
+                (e.target as HTMLImageElement).src = getShadowPlaceholder(user.gender);
+            }}
+        />
         <div>
             <p className="font-semibold text-gray-800">{`${user.firstName} ${user.lastName}`}</p>
             <p className="text-xs text-gray-500">{user.phone}</p>
@@ -207,11 +220,12 @@ const OnboardingRequestsPage: React.FC = () => {
                         lastName: item.entityMetadata.lastName || '',
                         phone: item.entityMetadata.phoneNumber || item.entityMetadata.mobileWallet || 'N/A',
                         avatar: `https://i.pravatar.cc/150?u=${item.entityMetadata.username || 'user'}`,
-                        email: item.entityMetadata.email
+                        email: item.entityMetadata.email,
+                        gender: item.entityMetadata.gender
                     },
                     type: item.entityType === 'SUBSCRIBER' ? OnboardingType.Saver : OnboardingType.None,
                     submissionDate: item.entityMetadata.termsAcceptedAt || item.createdAt,
-                    status: item.status, // Assuming PENDING matches enum
+                    status: item.status, 
                     canApprove: item.canCurrentUserApprove,
                     details: { ...item.entityMetadata }
                 }));
@@ -245,7 +259,6 @@ const OnboardingRequestsPage: React.FC = () => {
         if (!selectedRequest || !selectedAction) return;
         setIsUpdating(true);
         try {
-             // Use the actual backend API to perform the action
             const response = await interceptedFetch(`${API_BASE_URL}/api/v1/approval-requests/${selectedRequest.id}/actions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -259,11 +272,8 @@ const OnboardingRequestsPage: React.FC = () => {
                 throw new Error("Failed to process request");
             }
             
-            // Remove from local list to reflect UI change immediately
             setRequests(prev => prev.filter(r => r.id !== selectedRequest.id));
             setIsActionModalOpen(false);
-            // Optionally refetch
-            // fetchRequests(); 
         } catch (err: any) {
             alert(`Error: ${err.message}`);
         } finally {
@@ -281,7 +291,6 @@ const OnboardingRequestsPage: React.FC = () => {
         });
     }, [requests, activeTab, searchQuery]);
     
-    // Formatting helper for date: 11/11/2025
     const formatDate = (isoString: string) => {
         if (!isoString) return 'N/A';
         const date = new Date(isoString);
@@ -385,7 +394,7 @@ const OnboardingRequestsPage: React.FC = () => {
                             <div className="flex items-center space-x-1">
                                 <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronLeft size={16} /></button>
                                  <span className="px-2 font-semibold text-gray-700">{currentPage}</span>
-                                <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronRight size={16} /></button>
+                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronRight size={16} /></button>
                             </div>
                         </div>
                     )}

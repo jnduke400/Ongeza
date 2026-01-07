@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,9 +17,11 @@ interface Transaction {
     type: string; // Income, Outcome
     paymentType: string;
     status: string;
+    msisdn: string;
+    accountNumber: string;
 }
 
-type SortableKeys = 'createdAt' | 'transactionId' | 'amount' | 'type' | 'paymentType' | 'status' | 'channel';
+type SortableKeys = 'createdAt' | 'transactionId' | 'amount' | 'type' | 'paymentType' | 'status' | 'channel' | 'msisdn' | 'accountNumber';
 
 const TypeIcon: React.FC<{ type: string }> = ({ type }) => {
     const isIncome = type?.toLowerCase() === 'income';
@@ -31,7 +32,7 @@ const TypeIcon: React.FC<{ type: string }> = ({ type }) => {
 };
 
 const StatusPill: React.FC<{ status: string }> = ({ status }) => {
-    const normalized = status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase();
+    const normalized = status ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase() : '';
     const styles: { [key: string]: string } = {
         Completed: 'bg-green-100 text-green-700',
         Pending: 'bg-yellow-100 text-yellow-700',
@@ -297,14 +298,16 @@ const LoanTransactionsPage: React.FC = () => {
                         </div>
                     )}
                     
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm min-w-[1450px]">
                         <thead className="border-b-2 border-gray-100 bg-gray-50/50">
                              <tr>
                                 <SortableTableHeader label="Transaction ID" columnKey="transactionId" sortConfig={sortConfig} requestSort={requestSort} />
                                 <SortableTableHeader label="Date" columnKey="createdAt" sortConfig={sortConfig} requestSort={requestSort} />
+                                <SortableTableHeader label="Phone" columnKey="msisdn" sortConfig={sortConfig} requestSort={requestSort} />
+                                <SortableTableHeader label="Account" columnKey="accountNumber" sortConfig={sortConfig} requestSort={requestSort} />
                                 <SortableTableHeader label="Reference" columnKey="transactionId" sortConfig={sortConfig} requestSort={requestSort} />
-                                <SortableTableHeader label="Channel" columnKey="channel" sortConfig={sortConfig} requestSort={requestSort} />
-                                <SortableTableHeader label="Amount" columnKey="amount" sortConfig={sortConfig} requestSort={requestSort} />
+                                <SortableTableHeader label="Channel" columnKey="channel" sortConfig={sortConfig} requestSort={requestSort} className="min-w-[180px]" />
+                                <SortableTableHeader label="Amount" columnKey="amount" sortConfig={sortConfig} requestSort={requestSort} className="min-w-[200px]" />
                                 <SortableTableHeader label="Type" columnKey="type" sortConfig={sortConfig} requestSort={requestSort} />
                                 <SortableTableHeader label="Payment Type" columnKey="paymentType" sortConfig={sortConfig} requestSort={requestSort} />
                                 <SortableTableHeader label="Status" columnKey="status" sortConfig={sortConfig} requestSort={requestSort} />
@@ -319,11 +322,13 @@ const LoanTransactionsPage: React.FC = () => {
                                         <tr key={tx.transactionId} className="border-t border-gray-100 hover:bg-gray-50/80 transition-colors">
                                             <td className="p-4 font-mono text-xs text-gray-500">{tx.transactionId}</td>
                                             <td className="p-4 text-gray-600 whitespace-nowrap">{tx.formattedDate}</td>
+                                            <td className="p-4 text-gray-600 font-medium whitespace-nowrap">{tx.msisdn}</td>
+                                            <td className="p-4 text-gray-600 whitespace-nowrap">{tx.accountNumber}</td>
                                             <td className="p-4 font-medium text-gray-800">{tx.reference}</td>
                                             <td className="p-4">
-                                                <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[11px] font-bold uppercase tracking-wider">{tx.channel}</span>
+                                                <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">{tx.channel}</span>
                                             </td>
-                                            <td className={`p-4 font-bold ${isIncome ? 'text-green-600' : 'text-gray-900'}`}>
+                                            <td className={`p-4 font-bold whitespace-nowrap ${isIncome ? 'text-green-600' : 'text-gray-900'}`}>
                                                 {isIncome ? '+' : '-'}TZS {tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="p-4">
@@ -344,7 +349,7 @@ const LoanTransactionsPage: React.FC = () => {
                                 })
                             ) : !loading && (
                                 <tr>
-                                    <td colSpan={9} className="text-center py-20 text-gray-500">
+                                    <td colSpan={11} className="text-center py-20 text-gray-500">
                                         <div className="flex flex-col items-center justify-center">
                                             <div className="bg-gray-100 p-4 rounded-full mb-3">
                                                 <XCircle size={32} className="text-gray-400" />

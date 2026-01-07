@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle, Eye, EyeOff, Check } from 'lucide-react';
@@ -28,6 +27,7 @@ const RegistrationStep: React.FC<{ setStep: (step: number) => void }> = ({ setSt
         const firstName = (form.elements.namedItem('firstName') as HTMLInputElement).value;
         const lastName = (form.elements.namedItem('lastName') as HTMLInputElement).value;
         const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+        const phone = (form.elements.namedItem('phone') as HTMLInputElement).value;
         const pin = (form.elements.namedItem('pin') as HTMLInputElement).value;
 
         try {
@@ -40,6 +40,7 @@ const RegistrationStep: React.FC<{ setStep: (step: number) => void }> = ({ setSt
                     password: password,
                     firstName: firstName,
                     lastName: lastName,
+                    phoneNumber: phone,
                     category: "SAVER",
                     pin: pin,
                 })
@@ -81,7 +82,14 @@ const RegistrationStep: React.FC<{ setStep: (step: number) => void }> = ({ setSt
             </div>
              <div>
                 <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-                <input type="tel" name="phone" required placeholder="+255XXXXXXXXX" pattern="\+255[0-9]{9}" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
+                <input 
+                    type="tel" 
+                    name="phone" 
+                    required 
+                    placeholder="e.g. 255712345678" 
+                    pattern="[+]?[0-9]{9,15}" 
+                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" 
+                />
             </div>
             
             <div className="relative">

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,6 +17,8 @@ interface LedgerTransaction {
     beforeBalance: number;
     afterBalance: number;
     credit: boolean;
+    accountNumber: string;
+    msisdn: string;
 }
 
 type SortableKeys = keyof LedgerTransaction;
@@ -357,7 +358,7 @@ export const LedgerPage: React.FC = () => {
 
                     {/* Table */}
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[1000px] text-left text-sm">
+                        <table className="w-full min-w-[1200px] text-left text-sm">
                             <thead>
                                 <tr className="border-b border-gray-200">
                                     <th className="p-4 w-12">
@@ -372,6 +373,8 @@ export const LedgerPage: React.FC = () => {
                                     </th>
                                     <th className="p-4 font-semibold"><SortableTableHeader label="Transaction ID" columnKey="transactionId" sortConfig={sortConfig} requestSort={requestSort} /></th>
                                     <th className="p-4 font-semibold"><SortableTableHeader label="Date" columnKey="formattedDate" sortConfig={sortConfig} requestSort={requestSort} /></th>
+                                    <th className="p-4 font-semibold"><SortableTableHeader label="Account" columnKey="accountNumber" sortConfig={sortConfig} requestSort={requestSort} /></th>
+                                    <th className="p-4 font-semibold"><SortableTableHeader label="Phone" columnKey="msisdn" sortConfig={sortConfig} requestSort={requestSort} /></th>
                                     <th className="p-4 font-semibold"><SortableTableHeader label="Description" columnKey="description" sortConfig={sortConfig} requestSort={requestSort} /></th>
                                     <th className="p-4 font-semibold"><SortableTableHeader label="Amount" columnKey="amount" sortConfig={sortConfig} requestSort={requestSort} /></th>
                                     <th className="p-4 font-semibold"><SortableTableHeader label="Status" columnKey="status" sortConfig={sortConfig} requestSort={requestSort} /></th>
@@ -387,6 +390,8 @@ export const LedgerPage: React.FC = () => {
                                             <td className="p-4"><div className="h-4 bg-gray-200 rounded w-4"></div></td>
                                             <td className="p-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
                                             <td className="p-4"><div className="h-4 bg-gray-200 rounded w-32"></div></td>
+                                            <td className="p-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                                            <td className="p-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
                                             <td className="p-4"><div className="h-4 bg-gray-200 rounded w-48"></div></td>
                                             <td className="p-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
                                             <td className="p-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
@@ -397,7 +402,7 @@ export const LedgerPage: React.FC = () => {
                                     ))
                                 ) : transactions.length === 0 ? (
                                     <tr>
-                                        <td colSpan={9} className="text-center py-10 text-gray-500">
+                                        <td colSpan={11} className="text-center py-10 text-gray-500">
                                             <div className="flex flex-col items-center justify-center">
                                                 <div className="bg-gray-100 p-4 rounded-full mb-3">
                                                     <AlertCircle size={24} className="text-gray-400" />
@@ -421,6 +426,8 @@ export const LedgerPage: React.FC = () => {
                                         </td>
                                         <td className="p-4 text-gray-500">{tx.transactionId || 'N/A'}</td>
                                         <td className="p-4 text-gray-500">{tx.formattedDate}</td>
+                                        <td className="p-4 text-gray-500 font-medium">{tx.accountNumber}</td>
+                                        <td className="p-4 text-gray-500">{tx.msisdn}</td>
                                         <td className="p-4 text-gray-800 font-medium">{tx.description}</td>
                                         <td className={`p-4 font-bold ${tx.credit ? 'text-green-600' : 'text-red-600'}`}>
                                             {tx.credit ? '+' : '-'}TZS {tx.amount.toLocaleString()}

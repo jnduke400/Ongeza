@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
 import { interceptedFetch } from '../services/api';
@@ -20,7 +19,7 @@ const formatApiString = (str: string | null | undefined): string => {
 };
 
 const RoleDetailPageSkeleton: React.FC = () => (
-    <div className="space-y-6 animate-pulse">
+    <div className="space-y-6">
         <div className="h-6 bg-gray-200 rounded w-48 mb-4"></div> {/* Back link */}
 
         <div className="flex flex-wrap justify-between items-center gap-4">
@@ -84,9 +83,23 @@ const formatPhoneNumber = (phone: string): string => {
     return phone;
 };
 
+// Helper to get gender-specific shadow placeholder matching requested silhouettes
+const getShadowPlaceholder = (gender?: string) => {
+    const isFemale = gender?.toUpperCase() === 'FEMALE';
+    if (isFemale) return 'https://ui-avatars.com/api/?name=F&background=E2E8F0&color=94A3B8&size=150&bold=true';
+    return 'https://ui-avatars.com/api/?name=M&background=E2E8F0&color=94A3B8&size=150&bold=true';
+};
+
 const UserCell: React.FC<{ user: UserForManagement['user'] }> = ({ user }) => (
     <div className="flex items-center">
-        <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover mr-3" />
+        <img 
+            src={user.avatar || getShadowPlaceholder(user.gender)} 
+            alt={user.name} 
+            className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-100 shadow-sm" 
+            onError={(e) => {
+                (e.target as HTMLImageElement).src = getShadowPlaceholder(user.gender);
+            }}
+        />
         <div>
             <p className="font-semibold text-gray-800">{user.name}</p>
             <p className="text-xs text-gray-500">{user.email}</p>
@@ -364,7 +377,12 @@ const AssignUserModal: React.FC<{
                     const mappedUsers: ModalUser[] = (data.data.content as any[]).map((apiUser: any) => ({
                         id: String(apiUser.id),
                         originalRoleId: apiUser.roleId,
-                        user: { name: `${apiUser.firstName} ${apiUser.lastName}`, email: apiUser.email, avatar: `https://i.pravatar.cc/150?u=${apiUser.username}`},
+                        user: { 
+                            name: `${apiUser.firstName} ${apiUser.lastName}`, 
+                            email: apiUser.email, 
+                            avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : getShadowPlaceholder(apiUser.gender),
+                            gender: apiUser.gender
+                        },
                         role: formatApiString(apiUser.roleName) as any,
                         category: formatApiString(apiUser.userCategory) as any,
                         phone: formatPhoneNumber(apiUser.phoneNumber),
@@ -530,15 +548,15 @@ const AssignUserModal: React.FC<{
                      <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
                         <p>Showing {Math.min((currentPage - 1) * itemsPerPage + 1, paginationData.totalElements)} to {Math.min(currentPage * itemsPerPage, paginationData.totalElements)} of {paginationData.totalElements} entries</p>
                         <div className="flex items-center space-x-1">
-                            <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronLeft size={16} /></button>
+                            <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronLeft size={16} /></button>
                             <span className="px-2 font-semibold">Page {currentPage} of {paginationData.totalPages > 0 ? paginationData.totalPages : 1}</span>
-                            <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === paginationData.totalPages || paginationData.totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronRight size={16} /></button>
+                            <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === paginationData.totalPages || paginationData.totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
                         </div>
                     </div>
                 </div>
                 <div className="p-6 bg-gray-50 border-t flex justify-end space-x-3">
-                    <button onClick={onClose} className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-300">Cancel</button>
-                    <button onClick={handleAssign} disabled={isAssignButtonDisabled} className="bg-primary text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-primary-dark disabled:bg-primary/50 flex items-center justify-center min-w-[120px]">
+                    <button onClick={onClose} className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">Cancel</button>
+                    <button onClick={handleAssign} disabled={isAssignButtonDisabled} className="bg-primary text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-primary-dark disabled:bg-primary/50 flex items-center justify-center min-w-[120px] transition-colors">
                         {isAssigning ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : 'Assign Users'}
                     </button>
                 </div>
@@ -657,7 +675,8 @@ const RoleDetailPage: React.FC = () => {
                     user: {
                         name: `${apiUser.firstName} ${apiUser.lastName}`,
                         email: apiUser.email,
-                        avatar: `https://i.pravatar.cc/150?u=${apiUser.username}`,
+                        avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : getShadowPlaceholder(apiUser.gender),
+                        gender: apiUser.gender
                     },
                     role: formatApiString(apiUser.roleName) as any,
                     category: formatApiString(apiUser.userCategory) as any,
@@ -799,7 +818,7 @@ const RoleDetailPage: React.FC = () => {
                                 />
                             </div>
                         )}
-                        <button onClick={handleSearchToggle} className="text-gray-400 hover:text-gray-600 p-1 rounded-full ml-2 flex-shrink-0">
+                        <button onClick={handleSearchToggle} className="text-gray-400 hover:text-gray-600 p-1 rounded-full ml-2 flex-shrink-0 transition-all">
                             {isSearchVisible ? <X size={20} /> : <Search size={20} />}
                         </button>
                     </div>
@@ -825,7 +844,14 @@ const RoleDetailPage: React.FC = () => {
                                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-0">
                                                     <div className="flex items-center">
                                                         <div className="h-10 w-10 flex-shrink-0">
-                                                            <img className="h-10 w-10 rounded-full" src={user.user.avatar} alt={user.user.name} />
+                                                            <img 
+                                                                className="h-10 w-10 rounded-full object-cover shadow-sm ring-1 ring-gray-100" 
+                                                                src={user.user.avatar || getShadowPlaceholder(user.user.gender)} 
+                                                                alt={user.user.name} 
+                                                                onError={(e) => {
+                                                                    (e.target as HTMLImageElement).src = getShadowPlaceholder(user.user.gender);
+                                                                }}
+                                                            />
                                                         </div>
                                                         <div className="ml-4">
                                                             <div className="font-medium text-gray-900">{user.user.name}</div>
@@ -849,7 +875,7 @@ const RoleDetailPage: React.FC = () => {
                                     <button
                                         onClick={() => setCurrentPage(p => p - 1)}
                                         disabled={currentPage === 1}
-                                        className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                     >
                                         <ChevronLeft size={18} />
                                     </button>
@@ -857,7 +883,7 @@ const RoleDetailPage: React.FC = () => {
                                     <button
                                         onClick={() => setCurrentPage(p => p + 1)}
                                         disabled={currentPage === paginationData.totalPages || paginationData.totalPages === 0}
-                                        className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                     >
                                         <ChevronRight size={18} />
                                     </button>

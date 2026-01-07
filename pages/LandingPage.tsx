@@ -1,4 +1,3 @@
-
 import React from 'react';
 // FIX: Using namespace import for react-router-dom to handle potential module resolution issues.
 import { Link } from 'react-router-dom';
@@ -122,6 +121,9 @@ const LandingPage: React.FC = () => {
           <div className="border-t border-gray-700 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-sm">&copy; 2025 PesaFlow. All rights reserved.</p>
             <div className="flex items-center space-x-4">
+              <Link to="/reset-password?token=123456" className="text-xs text-gray-600 hover:text-gray-400 border border-gray-700 px-3 py-1 rounded transition-colors">
+                Simulation: Password Reset
+              </Link>
               <Link to="/reset-pin?token=4" className="text-xs text-gray-600 hover:text-gray-400 border border-gray-700 px-3 py-1 rounded transition-colors">
                 Simulation: PIN Reset (Token 4)
               </Link>

@@ -245,11 +245,15 @@ const MessageDetail: React.FC<{
             <div className="flex-1 overflow-y-auto p-8 bg-white">
                 <div className="flex justify-between items-start mb-10">
                     <div className="flex items-center space-x-4">
-                        {message.avatar ? (
-                            <img src={message.avatar} alt={message.sender} className="w-14 h-14 rounded-full object-cover shadow-sm border border-gray-100" />
-                        ) : (
-                            <div className={`w-14 h-14 rounded-full ${message.isSystem ? 'bg-primary' : 'bg-emerald-100 text-emerald-700'} flex items-center justify-center text-white font-bold text-xl shadow-sm`}>{message.sender.charAt(0)}</div>
-                        )}
+                        {/* FIX: Using standardized shadow image for MessageDetail */}
+                        <img 
+                            src={message.avatar || 'https://i.pravatar.cc/150?u=shadow'} 
+                            alt={message.sender} 
+                            className="w-14 h-14 rounded-full object-cover shadow-sm border border-gray-100" 
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://i.pravatar.cc/150?u=shadow';
+                            }}
+                        />
                         <div>
                             <h3 className="text-xl font-bold text-gray-800">{message.sender}</h3>
                             <p className="text-sm text-gray-500 font-medium">Email: {message.email || 'N/A'}</p>
@@ -325,7 +329,8 @@ const MessagesPage: React.FC = () => {
                 const mapped: Message[] = result.data.content.map((n: Notification) => {
                     let senderName = "System Agent";
                     let senderEmail = "system.admin@pesaflow.com";
-                    let senderAvatar = null;
+                    // FIX: Default avatar to shadow silhouette
+                    let senderAvatar = 'https://i.pravatar.cc/150?u=shadow';
                     let isSystem = true;
                     if (n.senderId !== null) {
                         senderName = n.senderFullName || "Unknown User";
@@ -539,7 +544,15 @@ const MessagesPage: React.FC = () => {
                                                 <button onClick={(e) => { e.stopPropagation(); toggleStar(msg.id, msg.isStarred); }} className={`${msg.isStarred ? 'text-yellow-400' : 'text-gray-300 group-hover:text-emerald-400'} transition-colors`}>
                                                     <Star size={18} fill={msg.isStarred ? "currentColor" : "none"} />
                                                 </button>
-                                                <div className={`w-10 h-10 rounded-full ${msg.isSystem ? 'bg-primary' : 'bg-emerald-100 text-emerald-700'} flex items-center justify-center font-bold text-sm`}>{msg.sender.charAt(0)}</div>
+                                                {/* FIX: Using standardized shadow image for Message List */}
+                                                <img 
+                                                    src={msg.avatar || 'https://i.pravatar.cc/150?u=shadow'} 
+                                                    alt={msg.sender} 
+                                                    className="w-10 h-10 rounded-full object-cover shadow-sm border border-gray-50"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).src = 'https://i.pravatar.cc/150?u=shadow';
+                                                    }}
+                                                />
                                             </div>
                                             <div className="ml-6 min-w-0 flex-1 flex items-center">
                                                 <span className={`w-40 shrink-0 text-sm ${!msg.read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>{msg.sender}</span>

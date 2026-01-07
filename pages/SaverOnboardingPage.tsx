@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, User, DollarSign, ShieldCheck, FileUp, CheckCircle, Loader2 } from 'lucide-react';
+import { Check, User, DollarSign, ShieldCheck, FileUp, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { tanzaniaRegions, mockRegions } from '../services/mockData';
 // FIX: Aliased 'User' interface to 'AuthUser' to resolve conflict with 'User' icon from lucide-react.
@@ -64,11 +64,12 @@ const SaverOnboardingPage: React.FC = () => {
     // State for all form data
     const [personalData, setPersonalData] = useState({ dob: '', gender: 'MALE', address: '', street: '', city: '', country: 'Tanzania', region: '', district: '' });
     const [districts, setDistricts] = useState<string[]>([]);
-    const [kycDocuments, setKycDocuments] = useState<ApiDocumentType[]>([]);
+    const [requiredDocuments, setRequiredDocuments] = useState<ApiDocumentType[]>([]);
+    const [alternativeDocuments, setAlternativeDocuments] = useState<ApiDocumentType[]>([]);
     const [loadingKyc, setLoadingKyc] = useState(true);
     const [files, setFiles] = useState<{ [code: string]: File | null }>({});
     
-    const [financialData, setFinancialData] = useState({ mobileWallet: '', nextOfKinFullName: '', nextOfKinPhone: '', nextOfKinRelationship: 'BROTHER' });
+    const [financialData, setFinancialData] = useState({ mobileWallet: '', currency: 'TZS', nextOfKinFullName: '', nextOfKinPhone: '', nextOfKinRelationship: 'BROTHER' });
     const [savingsPlan, setSavingsPlan] = useState({ auto: false });
     const [autoDeposit, setAutoDeposit] = useState({ amount: '5000', frequency: 'WEEKLY', dayOfWeek: 'FRIDAY', time: '10:00', startDate: '2025-01-01', endDate: '' });
     
@@ -80,14 +81,15 @@ const SaverOnboardingPage: React.FC = () => {
 
     useEffect(() => {
         const fetchKycDocuments = async () => {
+            setLoadingKyc(true);
             try {
-                const response = await interceptedFetch(`${API_BASE_URL}/api/v1/document-groups?search=saver`);
-                const data = await response.json();
-                if (!response.ok || !data.success) {
-                    throw new Error(data.message || 'Failed to fetch KYC documents.');
+                const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/onboarding/documents`);
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Failed to fetch KYC documents.');
                 }
-                const docTypes = data.data.content.map((item: ApiDocumentGroup) => item.documentType);
-                setKycDocuments(docTypes);
+                setRequiredDocuments(result.data.requiredDocuments || []);
+                setAlternativeDocuments(result.data.alternativeDocuments || []);
             } catch (err: any) {
                 setError(`Failed to load required documents: ${err.message}`);
             } finally {
@@ -121,10 +123,12 @@ const SaverOnboardingPage: React.FC = () => {
         setAutoDeposit(prev => ({ ...prev, [name]: value }));
     };
 
-    const isStep1Valid = useMemo(() => (
-        personalData.dob && personalData.street && personalData.city && personalData.region && personalData.district &&
-        kycDocuments.length > 0 && kycDocuments.every(doc => doc.code && files[doc.code])
-    ), [personalData, kycDocuments, files]);
+    const isStep1Valid = useMemo(() => {
+        const baseInfoValid = personalData.dob && personalData.street && personalData.city && personalData.region && personalData.district;
+        // Validation logic: All REQUIRED documents must have a file uploaded
+        const kycValid = requiredDocuments.length > 0 && requiredDocuments.every(doc => doc.code && files[doc.code]);
+        return baseInfoValid && kycValid;
+    }, [personalData, requiredDocuments, files]);
     
     const isStep2Valid = useMemo(() => {
         if (!financialData.mobileWallet.trim()) return false;
@@ -165,7 +169,10 @@ const SaverOnboardingPage: React.FC = () => {
                         country: personalData.country,
                     }
                 },
-                financialInfo: { mobileWallet: financialData.mobileWallet },
+                financialInfo: { 
+                    mobileWallet: financialData.mobileWallet,
+                    currency: financialData.currency
+                },
                 termsAccepted: termsAccepted,
             };
 
@@ -192,7 +199,9 @@ const SaverOnboardingPage: React.FC = () => {
             
             formData.append('onboardingData', JSON.stringify(onboardingData));
 
-            for (const doc of kycDocuments) {
+            // Combine both required and alternative files
+            const allSelectedDocs = [...requiredDocuments, ...alternativeDocuments];
+            for (const doc of allSelectedDocs) {
                 if (doc.code && files[doc.code]) {
                     const formKey = `kycDocument_${doc.code}`;
                     formData.append(formKey, files[doc.code] as File);
@@ -243,23 +252,58 @@ const SaverOnboardingPage: React.FC = () => {
                             </div>
                         </div>
                         <div className="pt-4 mt-4 border-t">
-                             <h4 className="font-semibold text-gray-700">KYC Documents</h4>
-                             <p className="text-xs text-gray-500 mb-3">Please upload the required identification documents.</p>
-                             {loadingKyc && <p>Loading document requirements...</p>}
-                             <div className="space-y-3">
-                                {kycDocuments.map(doc => doc.code && (
-                                    <div key={doc.id}>
-                                        <label className="font-medium text-gray-700">{doc.name}</label>
-                                        <div className="mt-1">
-                                             <label htmlFor={`file-${doc.code}`} className="flex items-center justify-center w-full px-4 py-2 text-sm text-gray-600 bg-gray-50 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:bg-gray-100">
-                                                <FileUp className="w-5 h-5 mr-2 text-gray-500" />
-                                                <span>{files[doc.code]?.name || `Upload ${doc.name}`}</span>
-                                                <input id={`file-${doc.code}`} type="file" required className="hidden" onChange={(e) => handleFileChange(doc.code!, e.target.files ? e.target.files[0] : null)} />
-                                            </label>
+                             <h4 className="font-semibold text-gray-700 mb-4">KYC Documents</h4>
+                             
+                             {loadingKyc ? (
+                                <div className="flex items-center space-x-2 text-gray-400 py-4">
+                                    <Loader2 className="animate-spin" size={20} />
+                                    <span>Loading document requirements...</span>
+                                </div>
+                             ) : (
+                                <div className="space-y-6">
+                                    {/* Required Documents */}
+                                    <div className="space-y-3">
+                                        <div className="flex items-center space-x-2 bg-indigo-50 p-2 px-3 rounded-lg border border-indigo-100">
+                                            <AlertCircle size={16} className="text-indigo-600" />
+                                            <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Required Documents (Mandatory)</span>
                                         </div>
+                                        {requiredDocuments.map(doc => doc.code && (
+                                            <div key={doc.id}>
+                                                <label className="font-medium text-gray-700 text-sm">{doc.name}</label>
+                                                <div className="mt-1">
+                                                     <label htmlFor={`file-${doc.code}`} className={`flex items-center justify-center w-full px-4 py-3 text-sm rounded-xl cursor-pointer transition-all border-2 border-dashed ${files[doc.code] ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}>
+                                                        <FileUp className="w-5 h-5 mr-3" />
+                                                        <span className="font-semibold truncate">{files[doc.code]?.name || `Click to upload ${doc.name}`}</span>
+                                                        <input id={`file-${doc.code}`} type="file" required className="hidden" onChange={(e) => handleFileChange(doc.code!, e.target.files ? e.target.files[0] : null)} />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                             </div>
+
+                                    {/* Alternative Documents */}
+                                    {alternativeDocuments.length > 0 && (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center space-x-2 bg-gray-100 p-2 px-3 rounded-lg border border-gray-200">
+                                                <CheckCircle size={16} className="text-gray-600" />
+                                                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Alternative Documents (Optional)</span>
+                                            </div>
+                                            {alternativeDocuments.map(doc => doc.code && (
+                                                <div key={doc.id}>
+                                                    <label className="font-medium text-gray-700 text-sm">{doc.name}</label>
+                                                    <div className="mt-1">
+                                                         <label htmlFor={`file-${doc.code}`} className={`flex items-center justify-center w-full px-4 py-3 text-sm rounded-xl cursor-pointer transition-all border-2 border-dashed ${files[doc.code] ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}>
+                                                            <FileUp className="w-5 h-5 mr-3" />
+                                                            <span className="font-semibold truncate">{files[doc.code]?.name || `Click to upload ${doc.name}`}</span>
+                                                            <input id={`file-${doc.code}`} type="file" className="hidden" onChange={(e) => handleFileChange(doc.code!, e.target.files ? e.target.files[0] : null)} />
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                             )}
                         </div>
                     </div>
                 );
@@ -267,9 +311,18 @@ const SaverOnboardingPage: React.FC = () => {
                 return (
                      <div className="space-y-6">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center"><DollarSign className="mr-3 text-primary"/>Financial Information</h3>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Linked Mobile Wallet</label>
-                            <input type="tel" placeholder="+255..." name="mobileWallet" value={financialData.mobileWallet} onChange={handleFinancialDataChange} required className="mt-1 w-full p-2 border border-gray-300 rounded-md"/>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Linked Mobile Wallet</label>
+                                <input type="tel" placeholder="+255..." name="mobileWallet" value={financialData.mobileWallet} onChange={handleFinancialDataChange} required className="mt-1 w-full p-2 border border-gray-300 rounded-md"/>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Currency</label>
+                                <select name="currency" value={financialData.currency} onChange={handleFinancialDataChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md">
+                                    <option value="TZS">TZS</option>
+                                    <option value="USD">USD</option>
+                                </select>
+                            </div>
                         </div>
                         <div className="pt-4 mt-4 border-t">
                             <h4 className="font-semibold text-gray-700">Next of Kin (Optional)</h4>

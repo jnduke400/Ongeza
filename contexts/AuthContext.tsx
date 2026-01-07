@@ -4,14 +4,13 @@ import { User, UserRole } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
 
-// Helper to decode JWT
-const decodeJwt = (token: string) => {
-    try {
-        return JSON.parse(atob(token.split('.')[1]));
-    } catch (e) {
-        console.error("Failed to decode JWT:", e);
-        return null;
+// Helper to get gender-specific shadow placeholder
+const getShadowAvatar = (gender?: string) => {
+    const g = gender?.toUpperCase();
+    if (g === 'FEMALE') {
+        return 'https://ui-avatars.com/api/?name=F&background=E2E8F0&color=94A3B8&size=150&bold=true';
     }
+    return 'https://ui-avatars.com/api/?name=M&background=E2E8F0&color=94A3B8&size=150&bold=true';
 };
 
 const mapApiUserToUser = (apiUser: any): User | null => {
@@ -23,7 +22,6 @@ const mapApiUserToUser = (apiUser: any): User | null => {
     const roleNameUpper = apiUser.roleName ? apiUser.roleName.toUpperCase() : '';
 
     // Map role based on API response structure
-    // Check for explicit Admin roles (handling ROLE_ prefix and casing)
     if (roleNameUpper === 'ADMIN' || 
         roleNameUpper === 'ROLE_ADMIN' || 
         roleNameUpper === 'SUPER ADMINISTRATOR' || 
@@ -42,9 +40,10 @@ const mapApiUserToUser = (apiUser: any): User | null => {
 
     const isOnboarded = apiUser.status === 'ONBOARDED';
 
+    // FIX: Using standardized shadow image based on gender for missing profile pictures
     const avatar = apiUser.profilePictureUrl 
         ? `${API_BASE_URL}${apiUser.profilePictureUrl}` 
-        : `https://i.pravatar.cc/150?u=${apiUser.username}`;
+        : getShadowAvatar(apiUser.gender);
 
     return {
         id: String(apiUser.id),
@@ -59,6 +58,7 @@ const mapApiUserToUser = (apiUser: any): User | null => {
         goalAchievementRate: apiUser.goalAchievementRate,
         loginCount: apiUser.loginCount,
         currency: apiUser.currency,
+        gender: apiUser.gender,
     };
 };
 
@@ -103,7 +103,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const initAuth = async () => {
         const token = localStorage.getItem('accessToken');
         if (token) {
-            // Initial load: Try to fetch full profile for accurate name/details
             await fetchUserProfile();
         }
         setLoading(false);
@@ -152,7 +151,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('pinSet', String(pinSet));
         localStorage.setItem('2faSetupRequired', String(twoFaSetupRequired));
 
-        // Fetch full profile immediately after login to ensure state is correct
         await fetchUserProfile();
         
         return { success: true, message: 'Login successful' };
@@ -235,7 +233,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
         console.error('Error during logout API call:', error);
     } finally {
-        // This block executes regardless of the try/catch outcome, ensuring client-side logout
         setUser(null);
         localStorage.clear();
         sessionStorage.clear();
@@ -248,7 +245,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!prevUser) return null;
       return { ...prevUser, isOnboarded: true, onboardingStatus: 'ONBOARDED' };
     });
-    // Also trigger a profile refresh
     fetchUserProfile();
   };
 
@@ -270,7 +266,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  // To avoid rendering children before the initial session check is complete
   if (loading) {
       return null; 
   }

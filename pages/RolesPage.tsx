@@ -53,6 +53,13 @@ const formatPhoneNumber = (phone: string): string => {
     return phone;
 };
 
+// Helper to get gender-specific shadow placeholder matching requested silhouettes
+const getShadowPlaceholder = (gender?: string) => {
+    const isFemale = gender?.toUpperCase() === 'FEMALE';
+    if (isFemale) return 'https://ui-avatars.com/api/?name=F&background=E2E8F0&color=94A3B8&size=150&bold=true';
+    return 'https://ui-avatars.com/api/?name=M&background=E2E8F0&color=94A3B8&size=150&bold=true';
+};
+
 const StatusPill: React.FC<{ status: string }> = ({ status }) => {
     const styles: { [key: string]: string } = {
         Active: 'bg-green-100 text-green-700',
@@ -90,7 +97,14 @@ const RoleCell: React.FC<{ role: string }> = ({ role }) => {
 
 const UserCell: React.FC<{ user: UserData['user'] }> = ({ user }) => (
     <div className="flex items-center">
-        <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover mr-3" />
+        <img 
+            src={user.avatar || getShadowPlaceholder(user.gender)} 
+            alt={user.name} 
+            className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-100 shadow-sm" 
+            onError={(e) => {
+                (e.target as HTMLImageElement).src = getShadowPlaceholder(user.gender);
+            }}
+        />
         <div>
             <p className="font-semibold text-gray-800">{user.name}</p>
             <p className="text-xs text-gray-500">{user.email}</p>
@@ -127,6 +141,7 @@ const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 8 }) => {
         <>
             {Array.from({ length: rows }).map((_, index) => (
                 <tr key={index} className="animate-pulse">
+                    <td className="p-4"><div className="h-5 w-5 bg-gray-200 rounded"></div></td>
                     <td className="p-4">
                         <div className="flex items-center">
                             <div className="w-10 h-10 rounded-full bg-gray-200 mr-3"></div>
@@ -162,20 +177,20 @@ const DateFilterModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 transition-opacity duration-200">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
                 <div className="p-6 border-b flex justify-between items-center">
                     <h2 className="text-xl font-semibold text-gray-800">Filter by Date Range</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={24} /></button>
                 </div>
                 <div className="p-6 space-y-4">
                     <div>
                         <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                        <input type="date" id="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg"/>
+                        <input type="date" id="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-primary outline-none"/>
                     </div>
                     <div>
                         <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                        <input type="date" id="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg"/>
+                        <input type="date" id="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-primary outline-none"/>
                     </div>
                 </div>
                 <div className="p-6 bg-gray-50 border-t flex justify-end space-x-3">
@@ -595,9 +610,12 @@ const RoleCard: React.FC<{ role: ApiRoleType; onEdit: (role: ApiRoleType) => voi
     }, []);
 
     const maxAvatars = 3;
-    const avatarsToShow = Math.min(role.userCount || 0, maxAvatars);
+    const realUrls = (role.profilePictureUrls || []).map(url => `${API_BASE_URL}${url}`);
+    const placeholdersNeeded = Math.max(0, Math.min(role.userCount || 0, maxAvatars) - realUrls.length);
+    const placeholders = Array.from({ length: placeholdersNeeded }, () => getShadowPlaceholder());
+    const avatars = [...realUrls, ...placeholders].slice(0, maxAvatars);
+    
     const moreCount = (role.userCount || 0) > maxAvatars ? (role.userCount || 0) - maxAvatars : 0;
-    const avatarPlaceholders = Array.from({ length: avatarsToShow }, (_, i) => `https://i.pravatar.cc/150?u=${role.name}${i}`);
 
     const handleDelete = () => {
         onDelete(role);
@@ -614,8 +632,16 @@ const RoleCard: React.FC<{ role: ApiRoleType; onEdit: (role: ApiRoleType) => voi
             <div className="flex justify-between items-center mb-4">
                 <p className="text-gray-500">Total {role.userCount || 0} users</p>
                 <div className="flex -space-x-3">
-                    {avatarPlaceholders.map((avatar, index) => (
-                        <img key={index} src={avatar} alt="user" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                    {avatars.map((avatar, index) => (
+                        <img 
+                            key={index} 
+                            src={avatar} 
+                            alt="user" 
+                            className="w-8 h-8 rounded-full border-2 border-white object-cover" 
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = getShadowPlaceholder();
+                            }}
+                        />
                     ))}
                     {moreCount > 0 && (
                         <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-xs font-semibold text-white border-2 border-white">
@@ -801,27 +827,27 @@ const AddUserModal: React.FC<{
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700">Username</label>
-                            <input type="text" name="username" value={formData.username} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" />
+                            <input type="text" name="username" value={formData.username} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">First Name</label>
-                            <input type="text" name="firstname" value={formData.firstname} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" />
+                            <input type="text" name="firstname" value={formData.firstname} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                            <input type="text" name="lastname" value={formData.lastname} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" />
+                            <input type="text" name="lastname" value={formData.lastname} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Email</label>
-                            <input type="email" name="email" value={formData.email} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" />
+                            <input type="email" name="email" value={formData.email} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-                            <input type="tel" name="phonenumber" value={formData.phonenumber} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" />
+                            <input type="tel" name="phonenumber" value={formData.phonenumber} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
                         </div>
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700">Role</label>
-                            <select name="roleId" value={formData.roleId} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white">
+                            <select name="roleId" value={formData.roleId} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-primary outline-none">
                                 <option value="">Select a role</option>
                                 {roles.map(role => (
                                     <option key={role.id} value={role.id}>{formatApiString(role.name)}</option>
@@ -831,31 +857,31 @@ const AddUserModal: React.FC<{
                         <h3 className="md:col-span-2 text-lg font-semibold pt-4 border-t mt-2">Address</h3>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Region</label>
-                            <select name="region" value={formData.region} onChange={handleRegionChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white">
+                            <select name="region" value={formData.region} onChange={handleRegionChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-primary outline-none">
                                 <option value="">Select Region</option>
                                 {mockRegions.map(r => <option key={r} value={r}>{r}</option>)}
                             </select>
                         </div>
                          <div>
                             <label className="block text-sm font-medium text-gray-700">District</label>
-                            <select name="district" value={formData.district} onChange={handleChange} required disabled={!formData.region} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white disabled:bg-gray-100">
+                            <select name="district" value={formData.district} onChange={handleChange} required disabled={!formData.region} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white disabled:bg-gray-100 focus:ring-1 focus:ring-primary outline-none">
                                 <option value="">{formData.region ? 'Select District' : 'Select a region first'}</option>
                                 {districts.map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
                         </div>
                          <div>
                             <label className="block text-sm font-medium text-gray-700">Street</label>
-                            <input type="text" name="street" value={formData.street} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" />
+                            <input type="text" name="street" value={formData.street} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
                         </div>
                          <div>
                             <label className="block text-sm font-medium text-gray-700">Postal Code</label>
-                            <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" />
+                            <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
                         </div>
                     </div>
                 </div>
                 <div className="p-6 bg-gray-50 border-t flex justify-end space-x-3">
-                    <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-300">Cancel</button>
-                    <button type="submit" disabled={isSaving} className="bg-primary text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-primary-dark disabled:bg-primary/50 flex items-center justify-center min-w-[120px]">
+                    <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">Cancel</button>
+                    <button type="submit" disabled={isSaving} className="bg-primary text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-primary-dark disabled:bg-primary/50 flex items-center justify-center min-w-[120px] transition-colors">
                         {isSaving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : 'Add User'}
                     </button>
                 </div>
@@ -1002,9 +1028,15 @@ const RolesPage: React.FC = () => {
                 if (!response.ok) throw new Error("Failed to fetch users.");
                 const data: any = await response.json();
                 if (!data.success || !data.data || !Array.isArray(data.data.content)) throw new Error(data.message || "Failed to fetch users.");
+                
                 const mappedUsers: UserData[] = data.data.content.map((apiUser: any) => ({
                     id: String(apiUser.id),
-                    user: { name: `${apiUser.firstName} ${apiUser.lastName}`, email: apiUser.email, avatar: `https://i.pravatar.cc/150?u=${apiUser.username}` },
+                    user: { 
+                        name: `${apiUser.firstName} ${apiUser.lastName}`, 
+                        email: apiUser.email, 
+                        avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : getShadowPlaceholder(apiUser.gender),
+                        gender: apiUser.gender
+                    },
                     role: formatApiString(apiUser.roleName) as any, 
                     category: formatApiString(apiUser.userCategory) as any,
                     phone: formatPhoneNumber(apiUser.phoneNumber),
@@ -1102,7 +1134,6 @@ const RolesPage: React.FC = () => {
         try {
             const params = new URLSearchParams();
             
-            // Removing empty query parameters as requested
             if (debouncedSearchQuery) params.append('search', debouncedSearchQuery);
             params.append('userCategory', 'ADMIN'); 
             if (filters.role) params.append('roleName', filters.role);
@@ -1318,14 +1349,14 @@ const RolesPage: React.FC = () => {
                     </table>
                 </div>
 
-                 <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
+                <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
                     <p>Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalElements)} to {Math.min(currentPage * itemsPerPage, totalElements)} of {totalElements} entries</p>
                     <div className="flex items-center space-x-1">
-                        <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronLeft size={16} /></button>
-                        <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronLeft size={16} /></button>
-                        <span className="px-2 font-semibold">Page {currentPage} of {totalPages > 0 ? totalPages : 1}</span>
-                        <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronRight size={16} /></button>
-                        <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"><ChevronRight size={16} /></button>
+                        <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronLeft size={16} /></button>
+                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronLeft size={16} /></button>
+                        <span className="px-2 font-semibold text-gray-800">Page {currentPage} of {totalPages > 0 ? totalPages : 1}</span>
+                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
+                        <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
                     </div>
                 </div>
             </div>
