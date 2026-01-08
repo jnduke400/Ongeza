@@ -24,6 +24,9 @@ const mapApiUserToUser = (apiUser: any): User | null => {
     // Map role based on API response structure
     if (roleNameUpper === 'ADMIN' || 
         roleNameUpper === 'ROLE_ADMIN' || 
+        roleNameUpper === 'SUPER_ADMIN' ||
+        roleNameUpper === 'ROLE_SUPER_ADMIN' ||
+        roleNameUpper === 'SUPER ADMIN' ||
         roleNameUpper === 'SUPER ADMINISTRATOR' || 
         roleNameUpper === 'ROLE_SUPER_ADMINISTRATOR' ||
         roleNameUpper === 'ADMINISTRATOR') {
