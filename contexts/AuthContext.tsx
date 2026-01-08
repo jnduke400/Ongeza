@@ -64,7 +64,7 @@ const mapApiUserToUser = (apiUser: any): User | null => {
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<{ success: boolean; message: string; code?: string; twoFaRedirect?: boolean }>;
+  login: (username: string, password: string) => Promise<{ success: boolean; message: string; code?: string; twoFaRedirect?: boolean; mustChangePasswordRedirect?: boolean }>;
   logout: () => Promise<void>;
   completeOnboarding: () => void;
   updatePinStatus: (isSet: boolean) => void;
@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuth();
   }, []);
 
-  const login = async (username: string, password: string): Promise<{ success: boolean; message: string; code?: string; twoFaRedirect?: boolean; }> => {
+  const login = async (username: string, password: string): Promise<{ success: boolean; message: string; code?: string; twoFaRedirect?: boolean; mustChangePasswordRedirect?: boolean; }> => {
     try {
         const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
             method: 'POST',
@@ -134,7 +134,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             '2faRequired': twoFaRequired,
             '2faChallengeId': twoFaChallengeId,
             '2faSetupRequired': twoFaSetupRequired,
+            mustChangePassword,
         } = data.data;
+
+        // If password change is required, store tokens but don't finish login flow
+        if (mustChangePassword) {
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+            localStorage.setItem('sessionId', sessionId);
+            return { success: true, message: 'Password change required', mustChangePasswordRedirect: true };
+        }
 
         if (twoFaRequired && twoFaChallengeId) {
             navigate('/verify-2fa', { state: { challengeId: twoFaChallengeId } });

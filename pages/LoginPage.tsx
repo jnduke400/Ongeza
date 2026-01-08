@@ -41,6 +41,11 @@ const LoginPage: React.FC = () => {
     
     setLoading(false);
 
+    if (result.mustChangePasswordRedirect) {
+        navigate('/force-password-change');
+        return;
+    }
+
     if (result.twoFaRedirect) {
         // Navigation is handled by AuthContext, so we just stop processing here.
         return;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 // FIX: Using namespace import for react-router-dom to handle potential module resolution issues.
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -65,6 +64,7 @@ import ActivateAccountPage from './pages/ActivateAccountPage';
 import PinSetupPage from './pages/PinSetupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import ForcePasswordChangePage from './pages/ForcePasswordChangePage';
 import ResetPinPage from './pages/ResetPinPage';
 import PinVerificationPage from './pages/PinVerificationPage';
 import TwoFactorAuthPage from './pages/TwoFactorAuthPage';
@@ -127,6 +127,7 @@ const AppContent: React.FC = () => {
             <Route path="/activate-account" element={<PublicRoute><ActivateAccountPage /></PublicRoute>} />
             <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
             <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
+            <Route path="/force-password-change" element={<PublicRoute><ForcePasswordChangePage /></PublicRoute>} />
             <Route path="/reset-pin" element={<PublicRoute><ResetPinPage /></PublicRoute>} />
             <Route path="/verify-pin" element={<PinVerificationPage />} />
             
@@ -694,9 +695,7 @@ const AppContent: React.FC = () => {
                 path="/setup-2fa" 
                 element={
                     <ProtectedRoute>
-                        <DashboardLayout>
-                            <TwoFactorSetupPage />
-                        </DashboardLayout>
+                        <TwoFactorSetupPage />
                     </ProtectedRoute>
                 } 
             />
