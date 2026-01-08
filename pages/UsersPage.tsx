@@ -259,6 +259,7 @@ const AddUserModal: React.FC<{
         district: '',
         street: '',
         postalCode: '',
+        country: 'Tanzania',
     });
     const [districts, setDistricts] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
@@ -277,6 +278,7 @@ const AddUserModal: React.FC<{
                 district: '',
                 street: '',
                 postalCode: '',
+                country: 'Tanzania',
             });
             setDistricts([]);
             setError('');
@@ -313,6 +315,7 @@ const AddUserModal: React.FC<{
                     district: formData.district,
                     street: formData.street,
                     postalCode: formData.postalCode,
+                    country: formData.country,
                 }
             };
 
@@ -406,6 +409,10 @@ const AddUserModal: React.FC<{
                          <div>
                             <label className="block text-sm font-medium text-gray-700">Postal Code</label>
                             <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Country</label>
+                            <input type="text" name="country" value={formData.country} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
                         </div>
                     </div>
                 </div>
