@@ -5,9 +5,10 @@ import {
     Trash2, Eye, Upload, Users, UserCheck, UserX, TrendingUp, Edit, Loader2, Calendar,
     X, SlidersHorizontal,
 } from 'lucide-react';
-import { UserForManagement, ApiRole } from '../types';
+import { UserForManagement, ApiRole, ApiRole as ApiRoleType } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
+import { tanzaniaRegions, mockRegions } from '../services/mockData';
 
 type UserData = UserForManagement;
 type SortableKeys = keyof UserData | 'userName' | 'pinSet';
@@ -241,6 +242,184 @@ const DateFilterModal: React.FC<{
     );
 };
 
+const AddUserModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onUserAdded: () => void;
+    roles: ApiRoleType[];
+}> = ({ isOpen, onClose, onUserAdded, roles }) => {
+    const [formData, setFormData] = useState({
+        username: '',
+        firstname: '',
+        lastname: '',
+        email: '',
+        phonenumber: '',
+        roleId: '',
+        region: '',
+        district: '',
+        street: '',
+        postalCode: '',
+    });
+    const [districts, setDistricts] = useState<string[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) {
+            setFormData({
+                username: '',
+                firstname: '',
+                lastname: '',
+                email: '',
+                phonenumber: '',
+                roleId: '',
+                region: '',
+                district: '',
+                street: '',
+                postalCode: '',
+            });
+            setDistricts([]);
+            setError('');
+            setIsSaving(false);
+        }
+    }, [isOpen]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const region = e.target.value;
+        setFormData(prev => ({ ...prev, region: region, district: '' }));
+        setDistricts(tanzaniaRegions[region] || []);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        setError('');
+
+        try {
+            const payload = {
+                username: formData.username,
+                firstname: formData.firstname,
+                lastname: formData.lastname,
+                email: formData.email,
+                phonenumber: formData.phonenumber,
+                roleId: Number(formData.roleId),
+                address: {
+                    region: formData.region,
+                    district: formData.district,
+                    street: formData.street,
+                    postalCode: formData.postalCode,
+                }
+            };
+
+            if (!payload.roleId) {
+                throw new Error("Please select a role for the user.");
+            }
+
+            const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            const data: any = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Failed to create user.');
+            }
+            
+            alert(data.message || 'User created successfully!');
+            onUserAdded();
+            onClose();
+
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
+            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-gray-800">Add a New User</h2>
+                    <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
+                </div>
+                <div className="p-6 overflow-y-auto space-y-4">
+                    {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700">Username</label>
+                            <input type="text" name="username" value={formData.username} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">First Name</label>
+                            <input type="text" name="firstname" value={formData.firstname} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                            <input type="text" name="lastname" value={formData.lastname} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Email</label>
+                            <input type="email" name="email" value={formData.email} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <input type="tel" name="phonenumber" value={formData.phonenumber} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700">Role</label>
+                            <select name="roleId" value={formData.roleId} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-primary outline-none">
+                                <option value="">Select a role</option>
+                                {roles.map(role => (
+                                    <option key={role.id} value={role.id}>{formatApiString(role.name)}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <h3 className="md:col-span-2 text-lg font-semibold pt-4 border-t mt-2">Address</h3>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Region</label>
+                            <select name="region" value={formData.region} onChange={handleRegionChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-primary outline-none">
+                                <option value="">Select Region</option>
+                                {mockRegions.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        </div>
+                         <div>
+                            <label className="block text-sm font-medium text-gray-700">District</label>
+                            <select name="district" value={formData.district} onChange={handleChange} required disabled={!formData.region} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white disabled:bg-gray-100 focus:ring-1 focus:ring-primary outline-none">
+                                <option value="">{formData.region ? 'Select District' : 'Select a region first'}</option>
+                                {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                        </div>
+                         <div>
+                            <label className="block text-sm font-medium text-gray-700">Street</label>
+                            <input type="text" name="street" value={formData.street} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                        </div>
+                         <div>
+                            <label className="block text-sm font-medium text-gray-700">Postal Code</label>
+                            <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                        </div>
+                    </div>
+                </div>
+                <div className="p-6 bg-gray-50 border-t flex justify-end space-x-3">
+                    <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">Cancel</button>
+                    <button type="submit" disabled={isSaving} className="bg-primary text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-primary-dark disabled:bg-primary/50 flex items-center justify-center min-w-[120px] transition-colors">
+                        {isSaving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : 'Add User'}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
 const UsersPage: React.FC = () => {
     const [users, setUsers] = useState<UserData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -262,9 +441,11 @@ const UsersPage: React.FC = () => {
     const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
     const [dateFilter, setDateFilter] = useState<{ start: string; end: string } | null>(null);
     const [isExporting, setIsExporting] = useState(false);
+    const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
 
     const navigate = useNavigate();
 
+    const [roles, setRoles] = useState<ApiRoleType[]>([]);
     const [roleOptions, setRoleOptions] = useState<{ label: string; value: string }[]>([]);
     const [rolesLoading, setRolesLoading] = useState(true);
 
@@ -298,94 +479,94 @@ const UsersPage: React.FC = () => {
         fetchStats();
     }, []);
 
-    useEffect(() => {
-        const fetchUsers = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const sortDirection = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
-                
-                const sortKeyMap: { [key in SortableKeys]?: string } = {
-                    userName: 'username',
-                    role: 'roleName',
-                    category: 'userCategory',
-                    phone: 'phoneNumber',
-                    pinSet: 'pinSet',
-                    status: 'activity'
-                };
-                const sortBy = sortKeyMap[sortConfig.key] || 'createdAt';
+    const fetchUsers = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const sortDirection = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
+            
+            const sortKeyMap: { [key in SortableKeys]?: string } = {
+                userName: 'username',
+                role: 'roleName',
+                category: 'userCategory',
+                phone: 'phoneNumber',
+                pinSet: 'pinSet',
+                status: 'activity'
+            };
+            const sortBy = sortKeyMap[sortConfig.key] || 'createdAt';
 
-                const params = new URLSearchParams({
-                    page: String(currentPage - 1),
-                    size: String(itemsPerPage),
-                    sortBy: sortBy,
-                    sortDirection: sortDirection,
-                });
-                
-                if (debouncedSearchQuery) {
-                    params.append('search', debouncedSearchQuery);
-                }
-
-                if (filters.role) {
-                    params.append('roleName', filters.role);
-                }
-                if (filters.category) {
-                     params.append('userCategory', filters.category);
-                }
-                if (filters.status) {
-                    params.append('activity', filters.status.toUpperCase());
-                }
-
-                if (dateFilter) {
-                    params.append('createdFrom', `${dateFilter.start}T00:00:00`);
-                    params.append('createdTo', `${dateFilter.end}T23:59:59`);
-                }
-                
-                const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/users?${params.toString()}`);
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || "Failed to fetch users.");
-                }
-
-                const data = await response.json();
-                
-                if (!data.success || !data.data || !Array.isArray(data.data.content)) {
-                    throw new Error(data.message || "Invalid data structure received.");
-                }
-
-                // FIX: Implemented logic to filter and only display users whose onboarding status is 'ONBOARDED'
-                const filteredContent = data.data.content.filter((apiUser: any) => apiUser.status === 'ONBOARDED');
-
-                const mappedUsers: UserData[] = filteredContent.map((apiUser: any) => ({
-                    id: String(apiUser.id),
-                    user: {
-                        name: `${apiUser.firstName} ${apiUser.lastName}`,
-                        email: apiUser.email,
-                        avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : getShadowPlaceholder(apiUser.gender),
-                        gender: apiUser.gender,
-                    },
-                    role: formatApiString(apiUser.roleName) as UserData['role'],
-                    category: formatApiString(apiUser.userCategory) as UserData['category'] || 'Saver',
-                    phone: formatPhoneNumber(apiUser.phoneNumber),
-                    pinSet: apiUser.pinSet,
-                    status: formatApiString(apiUser.activity) as UserData['status'] || 'Inactive',
-                }));
-                
-                setUsers(mappedUsers);
-                setTotalPages(data.data.totalPages);
-                setTotalElements(data.data.totalElements);
-
-            } catch (err: any) {
-                 setError(err.message);
-                 setUsers([]); 
-                 setTotalPages(0);
-                 setTotalElements(0);
-            } finally {
-                setLoading(false);
+            const params = new URLSearchParams({
+                page: String(currentPage - 1),
+                size: String(itemsPerPage),
+                sortBy: sortBy,
+                sortDirection: sortDirection,
+            });
+            
+            if (debouncedSearchQuery) {
+                params.append('search', debouncedSearchQuery);
             }
-        };
 
+            if (filters.role) {
+                params.append('roleName', filters.role);
+            }
+            if (filters.category) {
+                 params.append('userCategory', filters.category);
+            }
+            if (filters.status) {
+                params.append('activity', filters.status.toUpperCase());
+            }
+
+            if (dateFilter) {
+                params.append('createdFrom', `${dateFilter.start}T00:00:00`);
+                params.append('createdTo', `${dateFilter.end}T23:59:59`);
+            }
+            
+            const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/users?${params.toString()}`);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to fetch users.");
+            }
+
+            const data = await response.json();
+            
+            if (!data.success || !data.data || !Array.isArray(data.data.content)) {
+                throw new Error(data.message || "Invalid data structure received.");
+            }
+
+            // FIX: Implemented logic to filter and only display users whose onboarding status is 'ONBOARDED'
+            const filteredContent = data.data.content.filter((apiUser: any) => apiUser.status === 'ONBOARDED');
+
+            const mappedUsers: UserData[] = filteredContent.map((apiUser: any) => ({
+                id: String(apiUser.id),
+                user: {
+                    name: `${apiUser.firstName} ${apiUser.lastName}`,
+                    email: apiUser.email,
+                    avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : getShadowPlaceholder(apiUser.gender),
+                    gender: apiUser.gender,
+                },
+                role: formatApiString(apiUser.roleName) as UserData['role'],
+                category: formatApiString(apiUser.userCategory) as UserData['category'] || 'Saver',
+                phone: formatPhoneNumber(apiUser.phoneNumber),
+                pinSet: apiUser.pinSet,
+                status: formatApiString(apiUser.activity) as UserData['status'] || 'Inactive',
+            }));
+            
+            setUsers(mappedUsers);
+            setTotalPages(data.data.totalPages);
+            setTotalElements(data.data.totalElements);
+
+        } catch (err: any) {
+             setError(err.message);
+             setUsers([]); 
+             setTotalPages(0);
+             setTotalElements(0);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchUsers();
     }, [currentPage, itemsPerPage, debouncedSearchQuery, sortConfig, filters, dateFilter]);
 
@@ -400,6 +581,7 @@ const UsersPage: React.FC = () => {
                 }
                 const data = await response.json();
                 if (data.success && data.data && Array.isArray(data.data.content)) {
+                    setRoles(data.data.content);
                     const options = data.data.content.map((apiRole: ApiRole) => ({
                         label: formatApiString(apiRole.name),
                         value: apiRole.name, 
@@ -523,6 +705,7 @@ const UsersPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <DateFilterModal isOpen={isDateFilterOpen} onClose={() => setIsDateFilterOpen(false)} onApply={handleApplyDateFilter} />
+            <AddUserModal isOpen={isAddUserModalOpen} onClose={() => setIsAddUserModalOpen(false)} onUserAdded={fetchUsers} roles={roles} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                  <StatCard 
                     title="Session" 
@@ -626,7 +809,7 @@ const UsersPage: React.FC = () => {
                             {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                             <span>Export</span>
                         </button>
-                        <button className="bg-primary text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-semibold hover:bg-primary-dark shadow-sm"><Plus size={16} /><span>Add New User</span></button>
+                        <button onClick={() => setIsAddUserModalOpen(true)} className="bg-primary text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-semibold hover:bg-primary-dark shadow-sm"><Plus size={16} /><span>Add New User</span></button>
                     </div>
                 </div>
 
