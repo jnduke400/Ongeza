@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -98,13 +97,32 @@ const Header: React.FC = () => {
       .join(' ');
   };
 
+  // Logic for dynamic greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    let timeGreeting = "Good evening"; // Default for night/evening
+    if (hour >= 5 && hour < 12) {
+      timeGreeting = "Good morning";
+    } else if (hour >= 12 && hour < 17) {
+      timeGreeting = "Good afternoon";
+    }
+
+    // New user (First login)
+    if (user.loginCount === 0) {
+      return `${timeGreeting}, ${user.firstName}!`;
+    }
+    
+    // Returning user
+    return `${timeGreeting} and welcome back, ${user.firstName}!`;
+  };
+
   // Combine real notifications with the static PIN reminder if applicable
   const displayUnreadCount = unreadCount + (showPinNotification ? 1 : 0);
 
   return (
     <header className="flex items-center justify-between h-20 px-6 bg-background">
       <div className="flex items-center">
-        <h1 className="text-2xl font-bold text-on-surface">Welcome Back, {user.firstName}!</h1>
+        <h1 className="text-2xl font-bold text-on-surface">{getGreeting()}</h1>
       </div>
       <div className="flex items-center space-x-5">
         <button className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors">
@@ -158,7 +176,7 @@ const Header: React.FC = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-gray-800 text-sm">Set up your PIN 🛡️</p>
-                            <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">Enhance your account security for easy access.</p>
+                            <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">Enhance your security and access your account faster.</p>
                             <p className="text-[10px] text-gray-400 mt-1">Just now</p>
                           </div>
                           <span className="w-2.5 h-2.5 bg-primary rounded-full mt-1.5 flex-shrink-0"></span>
