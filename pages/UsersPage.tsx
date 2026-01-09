@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     ChevronDown, ChevronUp, Download, MoreVertical, Search, ChevronLeft, ChevronRight, Plus,
     Trash2, Eye, Upload, Users, UserCheck, UserX, TrendingUp, Edit, Loader2, Calendar,
-    X, SlidersHorizontal,
+    X, SlidersHorizontal, UserMinus, AlertTriangle
 } from 'lucide-react';
 import { UserForManagement, ApiRole, ApiRole as ApiRoleType } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
@@ -428,6 +428,37 @@ const AddUserModal: React.FC<{
     );
 };
 
+const SuspendConfirmationModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    userName: string;
+    isSuspending: boolean;
+}> = ({ isOpen, onClose, onConfirm, userName, isSuspending }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="p-6 text-center">
+                    <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 mb-4">
+                        <AlertTriangle className="h-8 w-8 text-red-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">Suspend Account?</h3>
+                    <p className="text-gray-500 mt-2">
+                        Are you sure you want to suspend <span className="font-bold text-gray-800">{userName}</span>? This user will immediately lose access to all platform features.
+                    </p>
+                </div>
+                <div className="p-6 bg-gray-50 flex flex-col sm:flex-row gap-3 border-t border-gray-100">
+                    <button onClick={onClose} disabled={isSuspending} className="flex-1 bg-white border border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+                    <button onClick={onConfirm} disabled={isSuspending} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-all flex items-center justify-center disabled:bg-red-400">
+                        {isSuspending ? <Loader2 size={20} className="animate-spin" /> : 'Suspend User'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const UsersPage: React.FC = () => {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<UserData[]>([]);
@@ -452,15 +483,25 @@ const UsersPage: React.FC = () => {
     const [isExporting, setIsExporting] = useState(false);
     const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
 
+    // Suspension states
+    const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+    const [isSuspending, setIsSuspending] = useState(false);
+    const [pendingUser, setPendingUser] = useState<UserData | null>(null);
+
     const navigate = useNavigate();
 
     const [roles, setRoles] = useState<ApiRoleType[]>([]);
     const [roleOptions, setRoleOptions] = useState<{ label: string; value: string }[]>([]);
     const [rolesLoading, setRolesLoading] = useState(true);
 
-    const canDelete = useMemo(() => {
+    const canSuspend = useMemo(() => {
         if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
-        return currentUser.permissions.includes('DELETE_USER');
+        return currentUser.permissions.includes('SUSPEND_USER');
+    }, [currentUser]);
+
+    const canActivate = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('ACTIVATE_USER');
     }, [currentUser]);
 
     const canCreateUser = useMemo(() => {
@@ -712,6 +753,49 @@ const UsersPage: React.FC = () => {
         }
     };
 
+    const handleActivate = async (userId: string) => {
+        try {
+            const response = await interceptedFetch(`${API_BASE_URL}/api/v1/users/${userId}/activate`, {
+                method: 'PUT'
+            });
+            const result = await response.json();
+            if (response.ok && result.success) {
+                fetchUsers();
+            } else {
+                throw new Error(result.message || "Activation request failed.");
+            }
+        } catch (err: any) {
+            alert(err.message);
+        }
+    };
+
+    const handleSuspendClick = (user: UserData) => {
+        setPendingUser(user);
+        setIsSuspendModalOpen(true);
+    };
+
+    const confirmSuspend = async () => {
+        if (!pendingUser) return;
+        setIsSuspending(true);
+        try {
+            const response = await interceptedFetch(`${API_BASE_URL}/api/v1/users/${pendingUser.id}/suspend`, {
+                method: 'PUT'
+            });
+            const result = await response.json();
+            if (response.ok && result.success) {
+                setIsSuspendModalOpen(false);
+                fetchUsers();
+            } else {
+                throw new Error(result.message || "Suspension failed.");
+            }
+        } catch (err: any) {
+            alert(err.message);
+        } finally {
+            setIsSuspending(false);
+            setPendingUser(null);
+        }
+    };
+
     const areAllOnPageSelected = users.length > 0 && users.every(id => selectedRows.includes(id.id));
     const areSomeOnPageSelected = users.some(id => selectedRows.includes(id.id));
     
@@ -725,6 +809,13 @@ const UsersPage: React.FC = () => {
         <div className="space-y-6">
             <DateFilterModal isOpen={isDateFilterOpen} onClose={() => setIsDateFilterOpen(false)} onApply={handleApplyDateFilter} />
             <AddUserModal isOpen={isAddUserModalOpen} onClose={() => setIsAddUserModalOpen(false)} onUserAdded={fetchUsers} roles={roles} />
+            <SuspendConfirmationModal 
+                isOpen={isSuspendModalOpen} 
+                onClose={() => {setIsSuspendModalOpen(false); setPendingUser(null);}} 
+                onConfirm={confirmSuspend}
+                userName={pendingUser?.user.name || ''}
+                isSuspending={isSuspending}
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                  <StatCard 
                     title="Session" 
@@ -854,26 +945,36 @@ const UsersPage: React.FC = () => {
                             ) : error ? (
                                 <tr><td colSpan={8} className="text-center py-10 text-red-500">Error: {error}</td></tr>
                             ) : users.length > 0 ? (
-                                users.map(user => (
-                                    <tr key={user.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50 text-sm">
-                                        <td className="p-4"><input type="checkbox" checked={selectedRows.includes(user.id)} onChange={() => handleRowSelect(user.id)} className="rounded"/></td>
-                                        <td className="p-4"><UserCell user={user.user} /></td>
-                                        <td className="p-4 text-gray-700"><RoleCell role={user.role} /></td>
-                                        <td className="p-4 text-gray-700">{user.category}</td>
-                                        <td className="p-4 text-gray-700">{user.phone}</td>
-                                        <td className="p-4"><PinStatusPill isSet={user.pinSet} /></td>
-                                        <td className="p-4"><StatusPill status={user.status} /></td>
-                                        <td className="p-4">
-                                            <div className="flex items-center space-x-2 text-gray-500">
-                                                {canDelete && (
-                                                    <button className="hover:text-red-600"><Trash2 size={18}/></button>
-                                                )}
-                                                <button onClick={() => navigate(`/users/${user.id}`)} className="hover:text-blue-600"><Eye size={18}/></button>
-                                                <button className="hover:text-gray-800"><MoreVertical size={18}/></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                                users.map(user => {
+                                    const isSuspended = user.status.toUpperCase() === 'SUSPENDED';
+                                    const isSuperAdmin = user.role.toUpperCase() === 'SUPER ADMIN';
+                                    return (
+                                        <tr key={user.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50 text-sm">
+                                            <td className="p-4"><input type="checkbox" checked={selectedRows.includes(user.id)} onChange={() => handleRowSelect(user.id)} className="rounded"/></td>
+                                            <td className="p-4"><UserCell user={user.user} /></td>
+                                            <td className="p-4 text-gray-700"><RoleCell role={user.role} /></td>
+                                            <td className="p-4 text-gray-700">{user.category}</td>
+                                            <td className="p-4 text-gray-700">{user.phone}</td>
+                                            <td className="p-4"><PinStatusPill isSet={user.pinSet} /></td>
+                                            <td className="p-4"><StatusPill status={user.status} /></td>
+                                            <td className="p-4">
+                                                <div className="flex items-center space-x-2 text-gray-500">
+                                                    {!isSuperAdmin && (isSuspended ? (
+                                                        canActivate && (
+                                                            <button onClick={() => handleActivate(user.id)} className="hover:text-green-600" title="Activate"><UserCheck size={18}/></button>
+                                                        )
+                                                    ) : (
+                                                        canSuspend && (
+                                                            <button onClick={() => handleSuspendClick(user)} className="hover:text-red-600" title="Suspend"><UserMinus size={18}/></button>
+                                                        )
+                                                    ))}
+                                                    <button onClick={() => navigate(`/users/${user.id}`)} className="hover:text-blue-600"><Eye size={18}/></button>
+                                                    <button className="hover:text-gray-800"><MoreVertical size={18}/></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             ) : (
                                 <tr><td colSpan={8} className="text-center py-10 text-gray-500">No users found matching your criteria.</td></tr>
                             )}

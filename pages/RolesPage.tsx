@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
     MoreVertical, Copy, Plus, Search, ChevronDown, Trash2, Eye, Edit, UserCheck, Shield, 
     ChevronUp, ChevronLeft, ChevronRight, Upload, X,
-    Users, TrendingUp, SlidersHorizontal, Loader2, Calendar
+    Users, TrendingUp, SlidersHorizontal, Loader2, Calendar, UserMinus, AlertTriangle
 } from 'lucide-react';
 import { UserForManagement, ApiRole as ApiRoleType, ApiPermission } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
@@ -203,6 +203,37 @@ const DateFilterModal: React.FC<{
     );
 };
 
+const SuspendConfirmationModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    userName: string;
+    isSuspending: boolean;
+}> = ({ isOpen, onClose, onConfirm, userName, isSuspending }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="p-6 text-center">
+                    <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 mb-4">
+                        <AlertTriangle className="h-8 w-8 text-red-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">Suspend Account?</h3>
+                    <p className="text-gray-500 mt-2">
+                        Are you sure you want to suspend <span className="font-bold text-gray-800">{userName}</span>? This user will immediately lose access to all platform features.
+                    </p>
+                </div>
+                <div className="p-6 bg-gray-50 flex flex-col sm:flex-row gap-3 border-t border-gray-100">
+                    <button onClick={onClose} disabled={isSuspending} className="flex-1 bg-white border border-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+                    <button onClick={onConfirm} disabled={isSuspending} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-all flex items-center justify-center disabled:bg-red-400">
+                        {isSuspending ? <Loader2 size={20} className="animate-spin" /> : 'Suspend User'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const EditRoleModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
@@ -312,7 +343,7 @@ const EditRoleModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 transition-opacity duration-300">
-            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col relative">
+            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col relative" onClick={e => e.stopPropagation()}>
                 <button type="button" onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:bg-gray-100 transition-colors z-20">
                     <X size={24} />
                 </button>
@@ -473,7 +504,7 @@ const AddRoleModal: React.FC<AddRoleModalProps> = ({ isOpen, onClose, allPermiss
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 transition-opacity duration-300">
-            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col relative">
+            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col relative" onClick={e => e.stopPropagation()}>
                 <button type="button" onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:bg-gray-100 transition-colors z-20">
                     <X size={24} />
                 </button>
@@ -904,8 +935,8 @@ const AddUserModal: React.FC<{
     );
 };
 
-// Missing constant for category filters
-const categoryOptions = [
+// Re-using defined categoryOptions for clarity
+const CATEGORY_OPTIONS = [
     { label: 'Borrower', value: 'BORROWER' },
     { label: 'Saver', value: 'SAVER' },
     { label: 'Investor', value: 'INVESTOR' },
@@ -923,6 +954,11 @@ const RolesPage: React.FC = () => {
     const [deletingRole, setDeletingRole] = useState<ApiRoleType | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     
+    // User Management specific states
+    const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+    const [isSuspending, setIsSuspending] = useState(false);
+    const [pendingUser, setPendingUser] = useState<UserData | null>(null);
+
     const [cardRoles, setCardRoles] = useState<ApiRoleType[]>([]);
     const [loadingCardRoles, setLoadingCardRoles] = useState(true);
     const [cardRolesError, setCardRolesError] = useState<string | null>(null);
@@ -947,7 +983,6 @@ const RolesPage: React.FC = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [usersRefreshKey, setUsersRefreshKey] = useState(0);
 
-    // Missing definitions for selectedRows state and headerCheckboxRef
     const [selectedRows, setSelectedRows] = useState<string[]>([]);
     const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
@@ -957,9 +992,20 @@ const RolesPage: React.FC = () => {
 
     const navigate = useNavigate();
 
-    const canDelete = useMemo(() => {
+    // FIX: Defining canDelete to check against current user's permissions.
+    const canDeleteRole = useMemo(() => {
         if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
-        return currentUser.permissions.includes('DELETE_USER');
+        return currentUser.permissions.includes('DELETE_ROLE');
+    }, [currentUser]);
+
+    const canSuspend = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('SUSPEND_USER');
+    }, [currentUser]);
+
+    const canActivate = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('ACTIVATE_USER');
     }, [currentUser]);
 
     const canCreateUser = useMemo(() => {
@@ -1017,7 +1063,6 @@ const RolesPage: React.FC = () => {
             setLoadingPermissions(true);
             setPermissionsError(null);
             try {
-                // UPDATE: Adding size=50 to fetch more permissions for role configuration
                 const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/permissions?size=50`);
                 if (!response.ok) throw new Error('Failed to fetch permissions');
                 const data: any = await response.json();
@@ -1051,55 +1096,56 @@ const RolesPage: React.FC = () => {
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    useEffect(() => {
-        const fetchUsers = async () => {
-            setLoadingUsers(true);
-            setUsersError(null);
-            try {
-                const sortDirection = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
-                const sortKeyMap: { [key in SortableKeys]?: string } = { userName: 'username', role: 'roleName', category: 'userCategory', phone: 'phoneNumber', status: 'activity' };
-                const sortBy = sortKeyMap[sortConfig.key] || 'createdAt';
-                const params = new URLSearchParams({ page: String(currentPage - 1), size: String(itemsPerPage), sortBy: sortBy, sortDirection: sortDirection });
-                if (debouncedSearchQuery) params.append('search', debouncedSearchQuery);
-                if (filters.role) params.append('roleName', filters.role);
-                
-                params.append('userCategory', 'ADMIN');
+    const fetchUsers = async () => {
+        setLoadingUsers(true);
+        setUsersError(null);
+        try {
+            const sortDirection = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
+            const sortKeyMap: { [key in SortableKeys]?: string } = { userName: 'username', role: 'roleName', category: 'userCategory', phone: 'phoneNumber', status: 'activity' };
+            const sortBy = sortKeyMap[sortConfig.key] || 'createdAt';
+            const params = new URLSearchParams({ page: String(currentPage - 1), size: String(itemsPerPage), sortBy: sortBy, sortDirection: sortDirection });
+            if (debouncedSearchQuery) params.append('search', debouncedSearchQuery);
+            if (filters.role) params.append('roleName', filters.role);
+            
+            params.append('userCategory', 'ADMIN');
 
-                if (filters.status) params.append('activity', filters.status.toUpperCase());
-                
-                if (dateFilter) {
-                    params.append('createdFrom', `${dateFilter.start}T00:00:00`);
-                    params.append('createdTo', `${dateFilter.end}T23:59:59`);
-                }
-
-                const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/users?${params.toString()}`);
-                if (!response.ok) throw new Error("Failed to fetch users.");
-                const data: any = await response.json();
-                if (!data.success || !data.data || !Array.isArray(data.data.content)) throw new Error(data.message || "Failed to fetch users.");
-                
-                const mappedUsers: UserData[] = data.data.content.map((apiUser: any) => ({
-                    id: String(apiUser.id),
-                    user: { 
-                        name: `${apiUser.firstName} ${apiUser.lastName}`, 
-                        email: apiUser.email, 
-                        avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : getShadowPlaceholder(apiUser.gender),
-                        gender: apiUser.gender
-                    },
-                    role: formatApiString(apiUser.roleName) as any, 
-                    category: formatApiString(apiUser.userCategory) as any,
-                    phone: formatPhoneNumber(apiUser.phoneNumber),
-                    pinSet: apiUser.pinSet,
-                    status: formatApiString(apiUser.activity) as any || 'Inactive',
-                }));
-                setUsers(mappedUsers);
-                setTotalPages(data.data.totalPages);
-                setTotalElements(data.data.totalElements);
-            } catch (err: any) {
-                 setUsersError(err.message);
-            } finally {
-                setLoadingUsers(false);
+            if (filters.status) params.append('activity', filters.status.toUpperCase());
+            
+            if (dateFilter) {
+                params.append('createdFrom', `${dateFilter.start}T00:00:00`);
+                params.append('createdTo', `${dateFilter.end}T23:59:59`);
             }
-        };
+
+            const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/users?${params.toString()}`);
+            if (!response.ok) throw new Error("Failed to fetch users.");
+            const data: any = await response.json();
+            if (!data.success || !data.data || !Array.isArray(data.data.content)) throw new Error(data.message || "Failed to fetch users.");
+            
+            const mappedUsers: UserData[] = data.data.content.map((apiUser: any) => ({
+                id: String(apiUser.id),
+                user: { 
+                    name: `${apiUser.firstName} ${apiUser.lastName}`, 
+                    email: apiUser.email, 
+                    avatar: apiUser.profilePictureUrl ? `${API_BASE_URL}${apiUser.profilePictureUrl}` : getShadowPlaceholder(apiUser.gender),
+                    gender: apiUser.gender
+                },
+                role: formatApiString(apiUser.roleName) as any, 
+                category: formatApiString(apiUser.userCategory) as any,
+                phone: formatPhoneNumber(apiUser.phoneNumber),
+                pinSet: apiUser.pinSet,
+                status: formatApiString(apiUser.activity) as any || 'Inactive',
+            }));
+            setUsers(mappedUsers);
+            setTotalPages(data.data.totalPages);
+            setTotalElements(data.data.totalElements);
+        } catch (err: any) {
+             setUsersError(err.message);
+        } finally {
+            setLoadingUsers(false);
+        }
+    };
+
+    useEffect(() => {
         if (canViewUsers) {
             fetchUsers();
         }
@@ -1178,6 +1224,49 @@ const RolesPage: React.FC = () => {
             setDeletingRole(null);
         }
     };
+
+    const handleActivate = async (userId: string) => {
+        try {
+            const response = await interceptedFetch(`${API_BASE_URL}/api/v1/users/${userId}/activate`, {
+                method: 'PUT'
+            });
+            const result = await response.json();
+            if (response.ok && result.success) {
+                fetchUsers();
+            } else {
+                throw new Error(result.message || "Activation request failed.");
+            }
+        } catch (err: any) {
+            alert(err.message);
+        }
+    };
+
+    const handleSuspendClick = (user: UserData) => {
+        setPendingUser(user);
+        setIsSuspendModalOpen(true);
+    };
+
+    const confirmSuspend = async () => {
+        if (!pendingUser) return;
+        setIsSuspending(true);
+        try {
+            const response = await interceptedFetch(`${API_BASE_URL}/api/v1/users/${pendingUser.id}/suspend`, {
+                method: 'PUT'
+            });
+            const result = await response.json();
+            if (response.ok && result.success) {
+                setIsSuspendModalOpen(false);
+                fetchUsers();
+            } else {
+                throw new Error(result.message || "Suspension failed.");
+            }
+        } catch (err: any) {
+            alert(err.message);
+        } finally {
+            setIsSuspending(false);
+            setPendingUser(null);
+        }
+    };
     
     const handleExport = async () => {
         setIsExporting(true);
@@ -1235,6 +1324,13 @@ const RolesPage: React.FC = () => {
     return (
         <div className="space-y-8">
             <DateFilterModal isOpen={isDateFilterOpen} onClose={() => setIsDateFilterOpen(false)} onApply={handleApplyDateFilter} />
+            <SuspendConfirmationModal 
+                isOpen={isSuspendModalOpen} 
+                onClose={() => {setIsSuspendModalOpen(false); setPendingUser(null);}} 
+                onConfirm={confirmSuspend}
+                userName={pendingUser?.user.name || ''}
+                isSuspending={isSuspending}
+            />
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-gray-800">Roles List</h1>
                 <p className="text-gray-500 mt-1">A role provided access to predefined menus and features so that depending on assigned role an administrator can have access to what he need</p>
@@ -1255,7 +1351,8 @@ const RolesPage: React.FC = () => {
                 <div className="text-center py-10 text-red-500">Error: {cardRolesError}</div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                    {cardRoles.map(role => <RoleCard key={role.id} role={role} onEdit={handleEditClick} onDelete={handleDeleteRoleClick} canDelete={!!canDelete} canEdit={canEditRole} canViewDetails={canViewRoles} />)}
+                    {/* FIX: Using canDeleteRole from useMemo instead of undefined canDelete */}
+                    {cardRoles.map(role => <RoleCard key={role.id} role={role} onEdit={handleEditClick} onDelete={handleDeleteRoleClick} canDelete={canDeleteRole} canEdit={canEditRole} canViewDetails={canViewRoles} />)}
                     {canCreateRole && <AddRoleCard onAdd={handleAddClick} />}
                 </div>
             )}
@@ -1290,7 +1387,7 @@ const RolesPage: React.FC = () => {
                                 name="role" 
                                 value={filters.role}
                                 onChange={handleFilterChange} 
-                                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary" 
+                                className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary" 
                                 disabled={rolesDropdownLoading}
                             >
                                 <option value="">Select Role</option>
@@ -1303,10 +1400,10 @@ const RolesPage: React.FC = () => {
                                 name="category" 
                                 value={filters.category}
                                 onChange={handleFilterChange} 
-                                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                                className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                             >
                                 <option value="">Select Category</option>
-                                {categoryOptions.map(opt => (
+                                {CATEGORY_OPTIONS.map(opt => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                 ))}
                             </select>
@@ -1315,7 +1412,7 @@ const RolesPage: React.FC = () => {
                                 name="status" 
                                 value={filters.status}
                                 onChange={handleFilterChange} 
-                                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                                className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                             >
                                 <option value="">Select Status</option>
                                 <option value="PENDING">Pending</option>
@@ -1325,7 +1422,7 @@ const RolesPage: React.FC = () => {
 
                             <button 
                                 onClick={() => setIsDateFilterOpen(true)} 
-                                className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors text-sm font-medium flex items-center space-x-2"
+                                className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors text-sm font-medium flex items-center justify-center space-x-2"
                             >
                                 <SlidersHorizontal size={18} />
                                 <span>Filter</span>
@@ -1378,26 +1475,36 @@ const RolesPage: React.FC = () => {
                                     ) : usersError ? (
                                         <tr><td colSpan={8} className="text-center p-8 text-red-500">Error: {usersError}</td></tr>
                                     ) : users.length > 0 ? (
-                                        users.map(user => (
-                                            <tr key={user.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50 text-sm">
-                                                <td className="p-4"><input type="checkbox" checked={selectedRows.includes(user.id)} onChange={() => handleRowSelect(user.id)} className="rounded"/></td>
-                                                <td className="p-4"><UserCell user={user.user} /></td>
-                                                <td className="p-4 text-gray-700"><RoleCell role={user.role} /></td>
-                                                <td className="p-4 text-gray-700">{user.category}</td>
-                                                <td className="p-4 text-gray-700">{user.phone}</td>
-                                                <td className="p-4"><PinStatusPill isSet={user.pinSet} /></td>
-                                                <td className="p-4"><StatusPill status={user.status} /></td>
-                                                <td className="p-4">
-                                                    <div className="flex items-center space-x-2 text-gray-500">
-                                                        {canDelete && (
-                                                            <button className="hover:text-red-600"><Trash2 size={18}/></button>
-                                                        )}
-                                                        <button onClick={() => navigate(`/users/${user.id}`)} className="hover:text-blue-600"><Eye size={18}/></button>
-                                                        <button className="hover:text-gray-800"><MoreVertical size={18}/></button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
+                                        users.map(user => {
+                                            const isSuspended = user.status.toUpperCase() === 'SUSPENDED';
+                                            const isSuperAdmin = user.role.toUpperCase() === 'SUPER ADMIN';
+                                            return (
+                                                <tr key={user.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50 text-sm">
+                                                    <td className="p-4"><input type="checkbox" checked={selectedRows.includes(user.id)} onChange={() => handleRowSelect(user.id)} className="rounded"/></td>
+                                                    <td className="p-4"><UserCell user={user.user} /></td>
+                                                    <td className="p-4 text-gray-700"><RoleCell role={user.role} /></td>
+                                                    <td className="p-4 text-gray-700">{user.category}</td>
+                                                    <td className="p-4 text-gray-700">{user.phone}</td>
+                                                    <td className="p-4"><PinStatusPill isSet={user.pinSet} /></td>
+                                                    <td className="p-4"><StatusPill status={user.status} /></td>
+                                                    <td className="p-4">
+                                                        <div className="flex items-center space-x-2 text-gray-500">
+                                                            {!isSuperAdmin && (isSuspended ? (
+                                                                canActivate && (
+                                                                    <button onClick={() => handleActivate(user.id)} className="hover:text-green-600" title="Activate"><UserCheck size={18}/></button>
+                                                                )
+                                                            ) : (
+                                                                canSuspend && (
+                                                                    <button onClick={() => handleSuspendClick(user)} className="hover:text-red-600" title="Suspend"><UserMinus size={18}/></button>
+                                                                )
+                                                            ))}
+                                                            <button onClick={() => navigate(`/users/${user.id}`)} className="hover:text-blue-600"><Eye size={18}/></button>
+                                                            <button className="hover:text-gray-800"><MoreVertical size={18}/></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                     ) : (
                                         <tr><td colSpan={8} className="text-center py-10 text-gray-500">No users found matching your criteria.</td></tr>
                                     )}

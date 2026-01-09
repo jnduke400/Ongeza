@@ -163,6 +163,7 @@ const UserInfoCard: React.FC<{
     const activityStatus = user.status?.toUpperCase() || '';
     const isActive = activityStatus === 'ACTIVE';
     const isSuspended = activityStatus === 'SUSPENDED';
+    const isSuperAdmin = user.role.toUpperCase() === 'SUPER ADMIN';
 
     const canActivate = currentUser?.permissions?.includes('ACTIVATE_USER');
     const canSuspend = currentUser?.permissions?.includes('SUSPEND_USER');
@@ -214,7 +215,7 @@ const UserInfoCard: React.FC<{
             </div>
             
             <div className="mt-8 flex space-x-3">
-                {canActivate && (
+                {!isSuperAdmin && canActivate && (
                     <button 
                         onClick={onActivate}
                         disabled={isActive || isActivating}
@@ -227,7 +228,7 @@ const UserInfoCard: React.FC<{
                         {isActivating ? <Loader2 size={18} className="animate-spin" /> : 'Activate'}
                     </button>
                 )}
-                {canSuspend && (
+                {!isSuperAdmin && canSuspend && (
                     <button 
                         onClick={onSuspend}
                         disabled={isSuspended || isSuspending}
