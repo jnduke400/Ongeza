@@ -74,6 +74,7 @@ import { UserRole } from './types';
 import SessionExpiryModal from './components/common/SessionExpiryModal';
 import OnboardingStatusPage from './pages/OnboardingStatusPage';
 import MessagesPage from './pages/MessagesPage';
+import TimelinePage from './pages/TimelinePage';
 
 // A wrapper for protected routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -447,6 +448,16 @@ const AppContent: React.FC = () => {
                     <ProtectedRoute>
                         <DashboardLayout>
                             <ProfilePage />
+                        </DashboardLayout>
+                    </ProtectedRoute>
+                } 
+            />
+            <Route 
+                path="/profile/timeline" 
+                element={
+                    <ProtectedRoute>
+                        <DashboardLayout>
+                            <TimelinePage />
                         </DashboardLayout>
                     </ProtectedRoute>
                 } 

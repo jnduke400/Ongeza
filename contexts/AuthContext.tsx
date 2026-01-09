@@ -77,7 +77,7 @@ const mapApiUserToUser = (apiUser: any): User | null => {
         onboardingStatus: apiUser.status,
         goalsCount: apiUser.goalsCount,
         goalAchievementRate: apiUser.goalAchievementRate,
-        loginCount: apiUser.loginCount,
+        loginCount: apiUser.totalLoginCount !== undefined ? apiUser.totalLoginCount : apiUser.loginCount,
         currency: apiUser.currency,
         gender: apiUser.gender,
         permissions: apiUser.permissions || [],

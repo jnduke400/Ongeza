@@ -427,16 +427,19 @@ const TimelineItem: React.FC<{ item: TimelineActivity }> = ({ item }) => {
 const ActivityTimelineCard: React.FC = () => {
     const [activities, setActivities] = useState<TimelineActivity[]>([]);
     const [loading, setLoading] = useState(true);
+    const [hasMore, setHasMore] = useState(false);
 
     useEffect(() => {
         const fetchTimeline = async () => {
             setLoading(true);
             try {
-                const res = await interceptedFetch(`${API_BASE_URL}/api/v1/timeline?page=0&size=100&sortBy=activityTimestamp&sortDirection=desc`);
+                // Fetch more than needed just to determine if 'View More' should be shown
+                const res = await interceptedFetch(`${API_BASE_URL}/api/v1/timeline?page=0&size=5&sortBy=activityTimestamp&sortDirection=desc`);
                 const result = await res.json();
                 if (result.success && result.data) {
                     const filtered = (result.data.content || []).filter((a: TimelineActivity) => a.referenceType !== 'WALLET');
-                    setActivities(filtered);
+                    setActivities(filtered.slice(0, 4));
+                    setHasMore(result.data.totalElements > 4);
                 }
             } catch (error) {
                 console.error("Failed to fetch timeline", error);
@@ -448,25 +451,38 @@ const ActivityTimelineCard: React.FC = () => {
     }, []);
 
     return (
-        <div className="bg-surface text-on-surface p-6 rounded-2xl h-full border border-gray-100 shadow-sm">
+        <div className="bg-surface text-on-surface p-6 rounded-2xl h-full border border-gray-100 shadow-sm flex flex-col">
             <div className="flex items-center mb-6">
                 <BarChart2 size={20} className="text-gray-500 mr-3" />
                 <h3 className="text-lg font-semibold text-gray-800">Activity Timeline</h3>
             </div>
-            {loading ? (
-                <div className="flex justify-center py-12">
-                    <Loader2 className="animate-spin text-primary" size={32} />
-                </div>
-            ) : activities.length === 0 ? (
-                <div className="text-center py-12 text-gray-400 italic">No recent activity.</div>
-            ) : (
-                <div className="relative">
-                    <div className="absolute left-2.5 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-                    <ul className="space-y-8">
-                        {activities.map((item) => (
-                            <TimelineItem key={item.id} item={item} />
-                        ))}
-                    </ul>
+            <div className="flex-1">
+                {loading ? (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="animate-spin text-primary" size={32} />
+                    </div>
+                ) : activities.length === 0 ? (
+                    <div className="text-center py-12 text-gray-400 italic">No recent activity.</div>
+                ) : (
+                    <div className="relative">
+                        <div className="absolute left-2.5 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                        <ul className="space-y-8 pb-4">
+                            {activities.map((item) => (
+                                <TimelineItem key={item.id} item={item} />
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </div>
+            {!loading && hasMore && (
+                <div className="mt-4 pt-4 border-t border-gray-50 text-center">
+                    <Link 
+                        to="/profile/timeline" 
+                        className="text-primary font-bold text-sm hover:text-primary-dark transition-colors inline-flex items-center group"
+                    >
+                        View More Activity
+                        <ChevronRight size={16} className="ml-1 group-hover:translate-x-1 transition-transform" />
+                    </Link>
                 </div>
             )}
         </div>

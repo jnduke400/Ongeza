@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { 
     PiggyBank, Sparkles, TrendingUp, Clock, Award, CheckCircle2, Wallet, CreditCard, Loader2, Target, Plus, MoreVertical,
-    Rocket, Plane, Home, Briefcase, BookOpen, HeartPulse, Gift
+    Rocket, Plane, Home, Briefcase, BookOpen, HeartPulse, Gift, PartyPopper
 } from 'lucide-react';
 import { API_BASE_URL } from '../../services/apiConfig';
 import { interceptedFetch } from '../../services/api';
@@ -20,7 +20,7 @@ const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
     </div>
 );
 
-// Updated Summary Stat Card to match Admin account design
+// Summary Stat Card
 const SummaryStatCard: React.FC<{
     icon: React.ReactNode;
     value: string;
@@ -53,6 +53,91 @@ const SummaryStatCard: React.FC<{
                 <p className="text-sm text-gray-500 mt-1">{title}</p>
             </div>
         </Card>
+    );
+};
+
+// --- CONFETTI ANIMATION COMPONENT ---
+const ConfettiRain: React.FC = () => {
+    const particles = useMemo(() => {
+        return Array.from({ length: 80 }).map((_, i) => ({
+            id: i,
+            left: `${Math.random() * 100}%`,
+            delay: `${Math.random() * 2}s`,
+            duration: `${1.5 + Math.random() * 2}s`,
+            color: ['#10B981', '#3B82F6', '#FBBF24', '#EC4899', '#8B5CF6'][i % 5],
+            size: `${Math.random() * 10 + 5}px`,
+            tilt: `${Math.random() * 360}deg`
+        }));
+    }, []);
+
+    return (
+        <div className="fixed inset-0 pointer-events-none z-[300] overflow-hidden">
+            <style>
+                {`
+                @keyframes confetti-fall {
+                    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+                    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+                }
+                .confetti-particle {
+                    position: absolute;
+                    top: -20px;
+                    animation: confetti-fall linear forwards;
+                }
+                `}
+            </style>
+            {/* FIX: Changed 'i % 2 === 0' to 'p.id % 2 === 0' to fix the "Cannot find name 'i'" error. */}
+            {particles.map(p => (
+                <div
+                    key={p.id}
+                    className="confetti-particle"
+                    style={{
+                        left: p.left,
+                        backgroundColor: p.color,
+                        width: p.size,
+                        height: p.size,
+                        borderRadius: p.id % 2 === 0 ? '50%' : '2px',
+                        animationDelay: p.delay,
+                        animationDuration: p.duration,
+                        transform: `rotate(${p.tilt})`
+                    }}
+                />
+            ))}
+        </div>
+    );
+};
+
+// First Login Celebration Component
+const FirstLoginCelebration: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+    const [isExploding, setIsExploding] = useState(false);
+
+    const handleStart = () => {
+        setIsExploding(true);
+        // Particles last for 3 seconds before modal closes as instructed
+        setTimeout(() => {
+            onClose();
+        }, 3000);
+    };
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center">
+            {isExploding && <ConfettiRain />}
+            <div className={`absolute inset-0 bg-black/40 backdrop-blur-[4px] transition-opacity duration-500 ${isExploding ? 'opacity-0' : 'opacity-100'}`}></div>
+            <div className={`relative bg-white p-8 rounded-[40px] shadow-2xl border border-emerald-100 text-center transition-all duration-500 max-w-sm mx-4 ${isExploding ? 'scale-0 opacity-0' : 'scale-100 opacity-100 animate-in zoom-in'}`}>
+                <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 text-emerald-600 animate-bounce">
+                    <PartyPopper size={48} />
+                </div>
+                <h2 className="text-3xl font-black text-gray-900 mb-2">Welcome Aboard! 🎉</h2>
+                <p className="text-gray-600 font-medium mb-8 leading-relaxed">
+                    Congratulations! Your account is now active. We're excited to help you reach your financial goals.
+                </p>
+                <button 
+                    onClick={handleStart}
+                    className="w-full bg-primary hover:bg-primary-dark text-white font-black py-5 rounded-[24px] shadow-xl shadow-emerald-200 transition-all active:scale-95 text-lg"
+                >
+                    Let's Start Saving
+                </button>
+            </div>
+        </div>
     );
 };
 
@@ -289,7 +374,6 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string }> =
         if (isToday) return timeString;
         if (isYesterday) return `Yesterday at ${timeString}`;
         
-        // Return format like "Jan 5 at 10:21 AM"
         return date.toLocaleString('en-US', {
             month: 'short',
             day: 'numeric',
@@ -330,15 +414,25 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string }> =
 };
 
 const SaverDashboard: React.FC = () => {
+    const { user } = useAuth();
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [showCelebration, setShowCelebration] = useState(false);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
                 const response = await interceptedFetch(`${API_BASE_URL}/api/v1/savings/dashboard`);
                 const data = await response.json();
-                if (data.success) setDashboardData(data.data);
+                if (data.success) {
+                    setDashboardData(data.data);
+                    
+                    // Trigger first-login animation if loginCount from Auth context is exactly 1
+                    if (user?.loginCount === 1 && !sessionStorage.getItem('firstLoginCelebrated')) {
+                        setShowCelebration(true);
+                        sessionStorage.setItem('firstLoginCelebrated', 'true');
+                    }
+                }
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
             } finally {
@@ -346,7 +440,7 @@ const SaverDashboard: React.FC = () => {
             }
         };
         fetchDashboardData();
-    }, []);
+    }, [user]);
 
     const chartData = useMemo(() => {
         if (!dashboardData?.chartData) return [];
@@ -361,37 +455,40 @@ const SaverDashboard: React.FC = () => {
     if (loading) return <div className="flex items-center justify-center h-[calc(100vh-100px)]"><Loader2 size={48} className="animate-spin text-primary" /></div>;
     if (!dashboardData) return <div className="p-8 text-center text-gray-500">Unable to load dashboard data.</div>;
 
-    // FIX: Correctly destructure goals and recentTransactions so they are available in scope.
     const { summary, goals, recentTransactions } = dashboardData;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 xl:gap-8">
-            <div className="lg:col-span-2 space-y-6 xl:space-y-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-                    <SummaryStatCard icon={<Wallet size={20} />} title="Current balance" value={`${summary.currency} ${summary.currentBalance.toLocaleString()}`} />
-                    <SummaryStatCard icon={<TrendingUp size={20} />} title="Monthly Earnings" value={`${summary.currency} ${summary.monthlyEarnings.toLocaleString()}`} />
-                    <SummaryStatCard icon={<PiggyBank size={20} />} title="Total Savings" value={`${summary.currency} ${summary.totalSavings.toLocaleString()}`} />
-                    <SummaryStatCard icon={<CreditCard size={20} />} title="Total Expenditure" value={`${summary.currency} ${summary.totalExpenditure.toLocaleString()}`} />
-                </div>
-                <SavingsBanner />
-                <StatisticsChartCard chartData={chartData} currency={summary.currency} />
-                <div>
-                    <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-gray-800">Goals</h2><Link to="/goals" className="text-sm text-primary font-medium hover:underline">See All</Link></div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {goals && goals.length > 0 ? goals.slice(0, 3).map((goal: any, i: number) => (
-                            <GoalCard key={goal.id} iconStr={goal.icon} title={goal.goalName} subtitle={`${goal.daysRemaining} days left`} current={goal.currentAmount} target={goal.targetAmount} color={['#f97316', '#ec4899', '#8b5cf6'][i % 3]} currency={goal.currency} />
-                        )) : (
-                            <Card className="flex flex-col items-center justify-center text-center h-full border-dashed border-2 border-gray-300">
-                                <Plus size={24} className="text-gray-400 mb-3" />
-                                <h3 className="font-semibold text-gray-800">No Goals Yet</h3>
-                                <Link to="/goals" className="mt-4 bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg">Create Goal</Link>
-                            </Card>
-                        )}
+        <div className="relative">
+            {showCelebration && <FirstLoginCelebration onClose={() => setShowCelebration(false)} />}
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 xl:gap-8">
+                <div className="lg:col-span-2 space-y-6 xl:space-y-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+                        <SummaryStatCard icon={<Wallet size={20} />} title="Current balance" value={`${summary.currency} ${summary.currentBalance.toLocaleString()}`} />
+                        <SummaryStatCard icon={<TrendingUp size={20} />} title="Monthly Earnings" value={`${summary.currency} ${summary.monthlyEarnings.toLocaleString()}`} />
+                        <SummaryStatCard icon={<PiggyBank size={20} />} title="Total Savings" value={`${summary.currency} ${summary.totalSavings.toLocaleString()}`} />
+                        <SummaryStatCard icon={<CreditCard size={20} />} title="Total Expenditure" value={`${summary.currency} ${summary.totalExpenditure.toLocaleString()}`} />
+                    </div>
+                    <SavingsBanner />
+                    <StatisticsChartCard chartData={chartData} currency={summary.currency} />
+                    <div>
+                        <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-gray-800">Goals</h2><Link to="/goals" className="text-sm text-primary font-medium hover:underline">See All</Link></div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {goals && goals.length > 0 ? goals.slice(0, 3).map((goal: any, i: number) => (
+                                <GoalCard key={goal.id} iconStr={goal.icon} title={goal.goalName} subtitle={`${goal.daysRemaining} days left`} current={goal.currentAmount} target={goal.targetAmount} color={['#f97316', '#ec4899', '#8b5cf6'][i % 3]} currency={goal.currency} />
+                            )) : (
+                                <Card className="flex flex-col items-center justify-center text-center h-full border-dashed border-2 border-gray-300">
+                                    <Plus size={24} className="text-gray-400 mb-3" />
+                                    <h3 className="font-semibold text-gray-800">No Goals Yet</h3>
+                                    <Link to="/goals" className="mt-4 bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg">Create Goal</Link>
+                                </Card>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div className="lg:col-span-1 space-y-6 xl:space-y-8">
-                <RightSidebarContent transactions={recentTransactions.slice(0, 5)} currency={summary.currency} />
+                <div className="lg:col-span-1 space-y-6 xl:space-y-8">
+                    <RightSidebarContent transactions={recentTransactions.slice(0, 5)} currency={summary.currency} />
+                </div>
             </div>
         </div>
     );
