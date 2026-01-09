@@ -5,6 +5,7 @@ import {
 import { DocumentType } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const FILE_TYPE_OPTIONS = ['ANY', 'PDF', 'DOCUMENT', 'SPREADSHEET'];
 
@@ -239,6 +240,7 @@ const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 10 }) => {
 };
 
 const DocumentTypesPage: React.FC = () => {
+    const { user: currentUser } = useAuth();
     const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -255,6 +257,21 @@ const DocumentTypesPage: React.FC = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingDocument, setEditingDocument] = useState<DocumentType | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
+
+    const canCreateType = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('CREATE_DOCUMENT_TYPES');
+    }, [currentUser]);
+
+    const canEditType = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('EDIT_DOCUMENT_TYPES');
+    }, [currentUser]);
+
+    const canDeleteType = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('DELETE_DOCUMENT_TYPES');
+    }, [currentUser]);
 
     useEffect(() => {
         const timerId = setTimeout(() => {
@@ -339,13 +356,15 @@ const DocumentTypesPage: React.FC = () => {
                     <h1 className="text-2xl font-bold text-gray-800">KYC Document Type List</h1>
                     <p className="text-gray-500 mt-1">Manage the types of documents required for Know Your Customer (KYC) verification.</p>
                 </div>
-                <button 
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="bg-primary text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-primary-dark flex items-center space-x-2 transition-colors"
-                >
-                    <Plus size={16}/>
-                    <span>Add New</span>
-                </button>
+                {canCreateType && (
+                    <button 
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="bg-primary text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-primary-dark flex items-center space-x-2 transition-colors"
+                    >
+                        <Plus size={16}/>
+                        <span>Add New</span>
+                    </button>
+                )}
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -401,8 +420,12 @@ const DocumentTypesPage: React.FC = () => {
                                         </td>
                                         <td className="p-3">
                                             <div className="flex items-center space-x-1 text-gray-500">
-                                                <button onClick={() => handleEditClick(doc)} className="p-2 rounded-full hover:bg-gray-100 hover:text-blue-500 transition-colors"><Edit2 size={18}/></button>
-                                                <button onClick={() => handleDelete(doc.id, doc.name)} className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                                                {canEditType && (
+                                                    <button onClick={() => handleEditClick(doc)} className="p-2 rounded-full hover:bg-gray-100 hover:text-blue-500 transition-colors"><Edit2 size={18}/></button>
+                                                )}
+                                                {canDeleteType && (
+                                                    <button onClick={() => handleDelete(doc.id, doc.name)} className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

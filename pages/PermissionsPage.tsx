@@ -5,6 +5,7 @@ import {
 import { ApiPermission } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 // Converts API strings (e.g., "USER_MANAGEMENT") to "User Management".
 const formatApiString = (str: string | null | undefined): string => {
@@ -243,6 +244,7 @@ const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 10 }) => {
 
 // Main Permissions Page Component
 const PermissionsPage: React.FC = () => {
+    const { user: currentUser } = useAuth();
     const [permissions, setPermissions] = useState<ApiPermission[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -255,6 +257,16 @@ const PermissionsPage: React.FC = () => {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
+
+    const canCreatePermission = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('CREATE_PERMISSION');
+    }, [currentUser]);
+
+    const canEditPermission = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('EDIT_PERMISSION');
+    }, [currentUser]);
 
     // Debounce search query
     useEffect(() => {
@@ -371,13 +383,15 @@ const PermissionsPage: React.FC = () => {
                                 className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                         </div>
-                        <button 
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-md flex items-center space-x-2 transition-colors"
-                        >
-                            <Plus size={20} />
-                            <span>Add Permission</span>
-                        </button>
+                        {canCreatePermission && (
+                            <button 
+                                onClick={() => setIsAddModalOpen(true)}
+                                className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-md flex items-center space-x-2 transition-colors"
+                            >
+                                <Plus size={20} />
+                                <span>Add Permission</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -409,7 +423,9 @@ const PermissionsPage: React.FC = () => {
                                         <td className="p-4 text-gray-600">{formatDate(permission.createdAt)}</td>
                                         <td className="p-4">
                                             <div className="flex items-center space-x-3 text-gray-400">
-                                                <button onClick={() => handleEditClick(permission)} className="hover:text-primary"><Edit2 size={18} /></button>
+                                                {canEditPermission && (
+                                                    <button onClick={() => handleEditClick(permission)} className="hover:text-primary"><Edit2 size={18} /></button>
+                                                )}
                                                 <button className="hover:text-red-500"><Trash2 size={18}/></button>
                                             </div>
                                         </td>

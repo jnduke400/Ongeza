@@ -5,6 +5,7 @@ import {
 import { DocumentGroup, ApiGroup, ApiDocumentType } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface MappedDocumentGroup {
     id: number;
@@ -58,7 +59,7 @@ const AddGroupModal: React.FC<{
                     setDocumentTypes(docTypesData.data.content);
 
                 } catch (err: any) {
-                    setError('Could not load necessary data: ' + err.message);
+                    setError('Could load necessary data: ' + err.message);
                 } finally {
                     setLoadingData(false);
                 }
@@ -314,6 +315,7 @@ const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 10 }) => {
 
 
 const DocumentGroupsPage: React.FC = () => {
+    const { user: currentUser } = useAuth();
     const [documentGroups, setDocumentGroups] = useState<MappedDocumentGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -330,6 +332,21 @@ const DocumentGroupsPage: React.FC = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingGroup, setEditingGroup] = useState<MappedDocumentGroup | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const canCreateGroup = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('CREATE_DOCUMENT_GROUPS');
+    }, [currentUser]);
+
+    const canEditGroup = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('EDIT_DOCUMENT_GROUPS');
+    }, [currentUser]);
+
+    const canDeleteGroup = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('DELETE_DOCUMENT_GROUPS');
+    }, [currentUser]);
 
     useEffect(() => {
         const timerId = setTimeout(() => {
@@ -421,13 +438,15 @@ const DocumentGroupsPage: React.FC = () => {
                         </ul>
                     </div>
                 </div>
-                 <button 
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="bg-primary text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-primary-dark flex items-center space-x-2 transition-colors"
-                >
-                    <Plus size={16}/>
-                    <span>Add Group</span>
-                </button>
+                 {canCreateGroup && (
+                    <button 
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="bg-primary text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-primary-dark flex items-center space-x-2 transition-colors"
+                    >
+                        <Plus size={16}/>
+                        <span>Add Group</span>
+                    </button>
+                 )}
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -482,8 +501,12 @@ const DocumentGroupsPage: React.FC = () => {
                                         <td className="p-3">
                                             <div className="flex items-center space-x-1 text-gray-500">
                                                 <button className="p-2 rounded-full hover:bg-gray-100 hover:text-indigo-500 transition-colors"><Eye size={18}/></button>
-                                                <button onClick={() => handleEditClick(group)} className="p-2 rounded-full hover:bg-gray-100 hover:text-blue-500 transition-colors"><Edit2 size={18}/></button>
-                                                <button onClick={() => handleDelete(group)} className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                                                {canEditGroup && (
+                                                    <button onClick={() => handleEditClick(group)} className="p-2 rounded-full hover:bg-gray-100 hover:text-blue-500 transition-colors"><Edit2 size={18}/></button>
+                                                )}
+                                                {canDeleteGroup && (
+                                                    <button onClick={() => handleDelete(group)} className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -502,7 +525,7 @@ const DocumentGroupsPage: React.FC = () => {
                     <div className="flex items-center space-x-1">
                         <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 flex items-center"><ChevronLeft size={16} /> <span className="ml-1 hidden sm:inline">Previous</span></button>
                         <span className="px-3 py-1 bg-primary text-white rounded-md font-semibold">{currentPage}</span>
-                        <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= totalPages || totalPages === 0} className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 flex items-center"><span className="mr-1 hidden sm:inline">Next</span> <ChevronRight size={16} /></button>
+                        <button onClick={() => setCurrentPage(p => + 1)} disabled={currentPage >= totalPages || totalPages === 0} className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 flex items-center"><span className="mr-1 hidden sm:inline">Next</span> <ChevronRight size={16} /></button>
                     </div>
                 </div>
             </div>

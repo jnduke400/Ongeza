@@ -4,6 +4,24 @@ import { User, UserRole } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
 
+// Helper to decode JWT payload safely
+const decodeJWT = (token: string) => {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+            window.atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+        );
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        console.error("JWT Decode error:", e);
+        return null;
+    }
+};
+
 // Helper to get gender-specific shadow placeholder
 const getShadowAvatar = (gender?: string) => {
     const g = gender?.toUpperCase();
@@ -62,6 +80,7 @@ const mapApiUserToUser = (apiUser: any): User | null => {
         loginCount: apiUser.loginCount,
         currency: apiUser.currency,
         gender: apiUser.gender,
+        permissions: apiUser.permissions || [],
     };
 };
 
@@ -85,15 +104,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchUserProfile = async () => {
       try {
+          const token = localStorage.getItem('accessToken');
           const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/users/me`);
+          
           if (response.ok) {
               const data = await response.json();
               if (data.success && data.data) {
                   const mappedUser = mapApiUserToUser(data.data);
                   if (mappedUser) {
+                      // Extract permissions from JWT if the API response is empty
+                      let permissions = mappedUser.permissions || [];
+                      if (permissions.length === 0 && token) {
+                          const decoded = decodeJWT(token);
+                          if (decoded && decoded.permissions) {
+                              permissions = decoded.permissions;
+                          }
+                      }
+
                       const pinSet = localStorage.getItem('pinSet') === 'true';
                       const twoFaSetupRequired = localStorage.getItem('2faSetupRequired') === 'true';
-                      setUser({ ...mappedUser, pinSet, twoFaSetupRequired });
+                      setUser({ ...mappedUser, permissions, pinSet, twoFaSetupRequired });
                   }
               }
           }

@@ -7,6 +7,7 @@ import {
 import { EntityType, ApiApprovalFlow } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 // Local interface to hold the required data for the table and modals
 interface MappedApprovalFlow {
@@ -322,6 +323,7 @@ const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 10 }) => {
 };
 
 const ApprovalFlowsPage: React.FC = () => {
+    const { user: currentUser } = useAuth();
     const [approvalFlows, setApprovalFlows] = useState<MappedApprovalFlow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -338,6 +340,26 @@ const ApprovalFlowsPage: React.FC = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingFlow, setEditingFlow] = useState<MappedApprovalFlow | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const canCreateFlow = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('CREATE_APPROVAL_FLOW');
+    }, [currentUser]);
+
+    const canEditFlow = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('EDIT_APPROVAL_FLOW');
+    }, [currentUser]);
+
+    const canDeleteFlow = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('DELETE_APPROVAL_FLOW');
+    }, [currentUser]);
+
+    const canViewFlow = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('VIEW_APPROVAL_FLOW');
+    }, [currentUser]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -435,13 +457,15 @@ const ApprovalFlowsPage: React.FC = () => {
                     <h1 className="text-2xl font-bold text-gray-800">Request Approval Flows</h1>
                     <p className="text-gray-500 mt-1">This page is supposed to facilitate approval process based on user role.</p>
                 </div>
-                 <button 
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="bg-primary text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-primary-dark flex items-center space-x-2 transition-colors"
-                >
-                    <Plus size={16}/>
-                    <span>Add a New Flow</span>
-                </button>
+                 {canCreateFlow && (
+                    <button 
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="bg-primary text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-primary-dark flex items-center space-x-2 transition-colors"
+                    >
+                        <Plus size={16}/>
+                        <span>Add a New Flow</span>
+                    </button>
+                 )}
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -495,9 +519,15 @@ const ApprovalFlowsPage: React.FC = () => {
                                         <td className="p-3 text-gray-600">{flow.createdAt}</td>
                                         <td className="p-3">
                                             <div className="flex items-center space-x-1 text-gray-500">
-                                                <Link to={`/configurations/approval-flows/${flow.id}`} className="p-2 rounded-full hover:bg-gray-100 hover:text-primary transition-colors"><Eye size={18}/></Link>
-                                                <button onClick={() => { setEditingFlow(flow); setIsEditModalOpen(true); }} className="p-2 rounded-full hover:bg-gray-100 hover:text-blue-500 transition-colors"><Edit2 size={18}/></button>
-                                                <button onClick={() => handleDelete(flow.id, flow.name)} className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                                                {canViewFlow && (
+                                                    <Link to={`/configurations/approval-flows/${flow.id}`} className="p-2 rounded-full hover:bg-gray-100 hover:text-primary transition-colors"><Eye size={18}/></Link>
+                                                )}
+                                                {canEditFlow && (
+                                                    <button onClick={() => { setEditingFlow(flow); setIsEditModalOpen(true); }} className="p-2 rounded-full hover:bg-gray-100 hover:text-blue-500 transition-colors"><Edit2 size={18}/></button>
+                                                )}
+                                                {canDeleteFlow && (
+                                                    <button onClick={() => handleDelete(flow.id, flow.name)} className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -511,6 +541,7 @@ const ApprovalFlowsPage: React.FC = () => {
 
                 <div className="flex justify-between items-center mt-6 text-sm">
                     <p className="text-gray-600">
+                        {/* FIX: Using paginationData.totalElements instead of totalElements */}
                         Showing {approvalFlows.length > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0} to {Math.min(currentPage * itemsPerPage, paginationData.totalElements)} of {paginationData.totalElements} entries
                     </p>
                     <div className="flex items-center space-x-1">

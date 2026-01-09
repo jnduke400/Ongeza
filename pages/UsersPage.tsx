@@ -9,6 +9,7 @@ import { UserForManagement, ApiRole, ApiRole as ApiRoleType } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
 import { tanzaniaRegions, mockRegions } from '../services/mockData';
+import { useAuth } from '../contexts/AuthContext';
 
 type UserData = UserForManagement;
 type SortableKeys = keyof UserData | 'userName' | 'pinSet';
@@ -234,7 +235,7 @@ const DateFilterModal: React.FC<{
                     </div>
                 </div>
                 <div className="p-6 bg-gray-50 border-t flex justify-end space-x-3">
-                    <button onClick={onClose} className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-300">Cancel</button>
+                    <button onClick={onClose} className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">Cancel</button>
                     <button onClick={handleApply} className="bg-primary text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-primary-dark">Apply</button>
                 </div>
             </div>
@@ -428,6 +429,7 @@ const AddUserModal: React.FC<{
 };
 
 const UsersPage: React.FC = () => {
+    const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<UserData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -455,6 +457,16 @@ const UsersPage: React.FC = () => {
     const [roles, setRoles] = useState<ApiRoleType[]>([]);
     const [roleOptions, setRoleOptions] = useState<{ label: string; value: string }[]>([]);
     const [rolesLoading, setRolesLoading] = useState(true);
+
+    const canDelete = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('DELETE_USER');
+    }, [currentUser]);
+
+    const canCreateUser = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('CREATE_USER');
+    }, [currentUser]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -791,9 +803,9 @@ const UsersPage: React.FC = () => {
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
                         <span>Show</span>
                         <select onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} value={itemsPerPage} className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
-                            <option>10</option>
-                            <option>25</option>
-                            <option>50</option>
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
                         </select>
                         <span>entries</span>
                     </div>
@@ -816,7 +828,9 @@ const UsersPage: React.FC = () => {
                             {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                             <span>Export</span>
                         </button>
-                        <button onClick={() => setIsAddUserModalOpen(true)} className="bg-primary text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-semibold hover:bg-primary-dark shadow-sm"><Plus size={16} /><span>Add New User</span></button>
+                        {canCreateUser && (
+                            <button onClick={() => setIsAddUserModalOpen(true)} className="bg-primary text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-semibold hover:bg-primary-dark shadow-sm"><Plus size={16} /><span>Add New User</span></button>
+                        )}
                     </div>
                 </div>
 
@@ -851,7 +865,9 @@ const UsersPage: React.FC = () => {
                                         <td className="p-4"><StatusPill status={user.status} /></td>
                                         <td className="p-4">
                                             <div className="flex items-center space-x-2 text-gray-500">
-                                                <button className="hover:text-red-600"><Trash2 size={18}/></button>
+                                                {canDelete && (
+                                                    <button className="hover:text-red-600"><Trash2 size={18}/></button>
+                                                )}
                                                 <button onClick={() => navigate(`/users/${user.id}`)} className="hover:text-blue-600"><Eye size={18}/></button>
                                                 <button className="hover:text-gray-800"><MoreVertical size={18}/></button>
                                             </div>
@@ -871,8 +887,8 @@ const UsersPage: React.FC = () => {
                         <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronLeft size={16} /></button>
                         <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronLeft size={16} /></button>
                         <span className="px-2 font-semibold text-gray-800">Page {currentPage} of {totalPages > 0 ? totalPages : 1}</span>
-                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
-                        <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
+                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
+                        <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage >= totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
                     </div>
                 </div>
             </div>

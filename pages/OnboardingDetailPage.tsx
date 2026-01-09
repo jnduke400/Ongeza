@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { OnboardingRequest, OnboardingStatus, OnboardingType, OnboardingDocument, LoanProduct, ApprovalAction } from '../types';
@@ -13,6 +12,13 @@ const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
         {children}
     </div>
 );
+
+// Helper to get gender-specific shadow placeholder
+const getShadowPlaceholder = (gender?: string) => {
+    const isFemale = gender?.toUpperCase() === 'FEMALE';
+    if (isFemale) return 'https://ui-avatars.com/api/?name=F&background=E2E8F0&color=94A3B8&size=150&bold=true';
+    return 'https://ui-avatars.com/api/?name=M&background=E2E8F0&color=94A3B8&size=150&bold=true';
+};
 
 const OnboardingIllustrationCard: React.FC = () => {
     return (
@@ -233,8 +239,9 @@ const OnboardingDetailPage: React.FC = () => {
                     firstName: item.entityMetadata.firstName || '',
                     lastName: item.entityMetadata.lastName || '',
                     phone: item.entityMetadata.phoneNumber || item.entityMetadata.mobileWallet || 'N/A',
-                    avatar: `https://i.pravatar.cc/150?u=${item.entityMetadata.username || 'user'}`,
-                    email: item.entityMetadata.email
+                    avatar: null, // Force null to use placeholder
+                    email: item.entityMetadata.email,
+                    gender: item.entityMetadata.gender
                 },
                 type: item.entityType === 'SUBSCRIBER' ? OnboardingType.Saver : OnboardingType.None,
                 submissionDate: item.entityMetadata.termsAcceptedAt || item.createdAt,
@@ -403,6 +410,17 @@ const OnboardingDetailPage: React.FC = () => {
                         <Card className="md:col-span-3">
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Applicant Information</h3>
                             <div className="space-y-2">
+                                <div className="flex items-center mb-6">
+                                    <img 
+                                        src={getShadowPlaceholder(request.details.gender)} 
+                                        alt="Profile Placeholder" 
+                                        className="w-20 h-20 rounded-full object-cover mr-4 border-2 border-gray-100 shadow-sm" 
+                                    />
+                                    <div>
+                                        <h4 className="text-lg font-bold text-gray-900">{request.user.firstName} {request.user.lastName}</h4>
+                                        <p className="text-sm text-gray-500 uppercase font-black tracking-widest">{request.type}</p>
+                                    </div>
+                                </div>
                                <DetailRow icon={<User size={20} />} label="Full Name" value={`${request.user.firstName} ${request.user.lastName}`} />
                                <DetailRow icon={<Phone size={20} />} label="Phone Number" value={request.user.phone} />
                                <DetailRow icon={<User size={20} />} label="Email" value={request.user.email} />

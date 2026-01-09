@@ -7,6 +7,7 @@ import {
 import { ApprovalFlow, ApprovalFlowStep, ApiApprovalStep, ApiApprovalFlow, ApiRole } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 type SortableKeys = keyof ApprovalFlowStep;
 
@@ -400,6 +401,7 @@ const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 5 }) => (
 
 const ApprovalFlowDetailPage: React.FC = () => {
     const { flowId } = useParams<{ flowId: string }>();
+    const { user: currentUser } = useAuth();
     const [flow, setFlow] = useState<ApprovalFlow | null>(null);
     const [steps, setSteps] = useState<ApprovalFlowStep[]>([]);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -410,6 +412,21 @@ const ApprovalFlowDetailPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const canCreateFlow = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('CREATE_APPROVAL_FLOW');
+    }, [currentUser]);
+
+    const canEditFlow = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('EDIT_APPROVAL_FLOW');
+    }, [currentUser]);
+
+    const canDeleteFlow = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('DELETE_APPROVAL_FLOW');
+    }, [currentUser]);
 
 
     useEffect(() => {
@@ -568,13 +585,15 @@ const ApprovalFlowDetailPage: React.FC = () => {
                     <h1 className="text-2xl font-bold text-gray-800">{flow.name} Approval Flow</h1>
                     <p className="text-gray-500 mt-1">Manage the steps and rules for the {flow.name} approval process.</p>
                 </div>
-                 <button 
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="bg-primary text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-primary-dark flex items-center space-x-2 transition-colors"
-                >
-                    <Plus size={16}/>
-                    <span>Add a New Step</span>
-                </button>
+                 {canCreateFlow && (
+                    <button 
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="bg-primary text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-primary-dark flex items-center space-x-2 transition-colors"
+                    >
+                        <Plus size={16}/>
+                        <span>Add a New Step</span>
+                    </button>
+                 )}
             </div>
             
             <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -604,8 +623,12 @@ const ApprovalFlowDetailPage: React.FC = () => {
                                     </td>
                                      <td className="p-3">
                                         <div className="flex items-center space-x-1 text-gray-500">
-                                            <button onClick={() => handleEditClick(step)} className="p-2 rounded-full hover:bg-gray-100 hover:text-blue-500 transition-colors"><Edit2 size={18}/></button>
-                                            <button onClick={() => handleDeleteStep(step)} className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                                            {canEditFlow && (
+                                                <button onClick={() => handleEditClick(step)} className="p-2 rounded-full hover:bg-gray-100 hover:text-blue-500 transition-colors"><Edit2 size={18}/></button>
+                                            )}
+                                            {canDeleteFlow && (
+                                                <button onClick={() => handleDeleteStep(step)} className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

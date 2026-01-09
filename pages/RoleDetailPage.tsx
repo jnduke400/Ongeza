@@ -1,21 +1,110 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
-import { interceptedFetch } from '../services/api';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Shield, Bell, MoreVertical, Search, ChevronLeft, ChevronRight, Target, Loader2, CheckCircle, AlertTriangle, DollarSign, Smartphone, Monitor, Tablet, X, Users, Edit, UserPlus, Eye, UserCheck, TrendingUp } from 'lucide-react';
+import { UserDetail, UserForManagement, ApiRole as ApiRoleType, ApiPermission } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
-import { ApiPermission, UserForManagement, ApiRole as ApiRoleType } from '../types';
-import { Users, Shield, Edit, UserPlus, ChevronLeft, MoreVertical, ChevronRight, Search, X, Trash2, Eye, Upload, UserCheck, TrendingUp } from 'lucide-react';
+import { interceptedFetch } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+
+interface DeviceData {
+    id: number;
+    client: string;
+    operatingSystem: string;
+    deviceType: string;
+    location: string;
+    ipAddress: string;
+    lastActive: string;
+    currentDevice: boolean;
+}
 
 const formatApiString = (str: string | null | undefined): string => {
     if (!str || str.toLowerCase() === 'undefined' || str.toLowerCase() === 'null') {
       return 'General';
     }
     return str
-      .replace('ROLE_', '')
-      .replace(/_/g, ' ')
-      .toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+};
+
+const getGoalIcon = (iconStr: string | null) => {
+    switch (iconStr?.toUpperCase()) {
+        case 'PLANE': return '✈️';
+        case 'HOME': return '🏠';
+        case 'BRIEFCASE': return '💼';
+        case 'BOOK': return '📚';
+        case 'HEART': return '❤️';
+        case 'GIFT': return '🎁';
+        case 'VACATION': return '🏖️';
+        default: return '💰';
+    }
+};
+
+// Helper to get gender-specific shadow placeholder matching requested silhouettes
+const getShadowPlaceholder = (gender?: string) => {
+    const isFemale = gender?.toUpperCase() === 'FEMALE';
+    if (isFemale) return 'https://ui-avatars.com/api/?name=F&background=E2E8F0&color=94A3B8&size=150&bold=true';
+    return 'https://ui-avatars.com/api/?name=M&background=E2E8F0&color=94A3B8&size=150&bold=true';
+};
+
+const formatPhoneNumber = (phone: string): string => {
+    if (!phone) return '';
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('255')) {
+        cleaned = '0' + cleaned.substring(3);
+    }
+    if (cleaned.length === 10) {
+        return `${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7, 10)}`;
+    }
+    return phone;
+};
+
+const UserCell: React.FC<{ user: UserForManagement['user'] }> = ({ user }) => (
+    <div className="flex items-center">
+        <img 
+            src={user.avatar || getShadowPlaceholder(user.gender)} 
+            alt={user.name} 
+            className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-100 shadow-sm" 
+            onError={(e) => {
+                (e.target as HTMLImageElement).src = getShadowPlaceholder(user.gender);
+            }}
+        />
+        <div>
+            <p className="font-semibold text-gray-800">{user.name}</p>
+            <p className="text-xs text-gray-500">{user.email}</p>
+        </div>
+    </div>
+);
+
+const RoleCell: React.FC<{ role: string }> = ({ role }) => {
+    const icons: { [key: string]: React.ReactNode } = {
+        Manager: <Edit size={16} className="text-orange-500" />,
+        User: <UserCheck size={16} className="text-green-500" />,
+        Admin: <Users size={16} className="text-indigo-500" />,
+        Investor: <TrendingUp size={16} className="text-blue-500" />,
+    };
+    return <div className="flex items-center space-x-2">
+        {icons[role] || <Users size={16} className="text-gray-500" />}
+        <span>{role}</span>
+    </div>
+};
+
+const StatusPill: React.FC<{ status: string }> = ({ status }) => {
+    const styles: { [key: string]: string } = {
+        Active: 'bg-green-100 text-green-700',
+        Inactive: 'bg-gray-100 text-gray-700',
+        Pending: 'bg-yellow-100 text-yellow-700',
+        Dormant: 'bg-gray-100 text-gray-700',
+        Suspended: 'bg-yellow-100 text-yellow-700',
+        Locked: 'bg-red-100 text-red-700',
+    };
+    return (
+        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
+            {status}
+        </span>
+    );
 };
 
 const RoleDetailPageSkeleton: React.FC = () => (
@@ -70,71 +159,6 @@ const RoleDetailPageSkeleton: React.FC = () => (
         </div>
     </div>
 );
-
-const formatPhoneNumber = (phone: string): string => {
-    if (!phone) return '';
-    let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.startsWith('255')) {
-        cleaned = '0' + cleaned.substring(3);
-    }
-    if (cleaned.length === 10) {
-        return `${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7, 10)}`;
-    }
-    return phone;
-};
-
-// Helper to get gender-specific shadow placeholder matching requested silhouettes
-const getShadowPlaceholder = (gender?: string) => {
-    const isFemale = gender?.toUpperCase() === 'FEMALE';
-    if (isFemale) return 'https://ui-avatars.com/api/?name=F&background=E2E8F0&color=94A3B8&size=150&bold=true';
-    return 'https://ui-avatars.com/api/?name=M&background=E2E8F0&color=94A3B8&size=150&bold=true';
-};
-
-const UserCell: React.FC<{ user: UserForManagement['user'] }> = ({ user }) => (
-    <div className="flex items-center">
-        <img 
-            src={user.avatar || getShadowPlaceholder(user.gender)} 
-            alt={user.name} 
-            className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-100 shadow-sm" 
-            onError={(e) => {
-                (e.target as HTMLImageElement).src = getShadowPlaceholder(user.gender);
-            }}
-        />
-        <div>
-            <p className="font-semibold text-gray-800">{user.name}</p>
-            <p className="text-xs text-gray-500">{user.email}</p>
-        </div>
-    </div>
-);
-
-const RoleCell: React.FC<{ role: string }> = ({ role }) => {
-    const icons: { [key: string]: React.ReactNode } = {
-        Manager: <Edit size={16} className="text-orange-500" />,
-        User: <UserCheck size={16} className="text-green-500" />,
-        Admin: <Users size={16} className="text-indigo-500" />,
-        Investor: <TrendingUp size={16} className="text-blue-500" />,
-    };
-    return <div className="flex items-center space-x-2">
-        {icons[role] || <Users size={16} className="text-gray-500" />}
-        <span>{role}</span>
-    </div>
-};
-
-const StatusPill: React.FC<{ status: string }> = ({ status }) => {
-    const styles: { [key: string]: string } = {
-        Active: 'bg-green-100 text-green-700',
-        Inactive: 'bg-gray-100 text-gray-700',
-        Pending: 'bg-yellow-100 text-yellow-700',
-        Dormant: 'bg-gray-100 text-gray-700',
-        Suspended: 'bg-yellow-100 text-yellow-700',
-        Locked: 'bg-red-100 text-red-700',
-    };
-    return (
-        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-            {status}
-        </span>
-    );
-};
 
 const EditRoleModal: React.FC<{
     isOpen: boolean;
@@ -567,6 +591,7 @@ const AssignUserModal: React.FC<{
 
 const RoleDetailPage: React.FC = () => {
     const { roleId } = useParams<{ roleId: string }>();
+    const { user: currentUser } = useAuth();
     const location = useLocation();
     const roleFromState = location.state?.role as ApiRoleType;
 
@@ -591,6 +616,16 @@ const RoleDetailPage: React.FC = () => {
     const [isSearchVisible, setIsSearchVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+    const canEditRole = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('EDIT_ROLE');
+    }, [currentUser]);
+
+    const canManageRoles = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('VIEW_ROLES') || currentUser.permissions.includes('MANAGE_ROLES');
+    }, [currentUser]);
 
     useEffect(() => {
         const timerId = setTimeout(() => {
@@ -633,7 +668,8 @@ const RoleDetailPage: React.FC = () => {
     useEffect(() => {
         const fetchAllPermissions = async () => {
             try {
-                const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/permissions`);
+                // UPDATE: Adding size=50 to fetch more permissions for consistency
+                const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/permissions?size=50`);
                 if (!response.ok) throw new Error('Failed to fetch all permissions');
                 const data: any = await response.json();
                 if (data.success && data.data && Array.isArray(data.data.content)) {
@@ -759,14 +795,18 @@ const RoleDetailPage: React.FC = () => {
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <h1 className="text-2xl font-bold text-gray-800">Role Details: {formatApiString(role.name)}</h1>
                 <div className="flex items-center space-x-3">
-                    <button onClick={() => setIsEditModalOpen(true)} className="flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-dark transition-colors">
-                        <Edit size={16} />
-                        <span>Edit Role</span>
-                    </button>
-                    <button onClick={() => setIsAssignModalOpen(true)} className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">
-                        <UserPlus size={16} />
-                        <span>Assign User</span>
-                    </button>
+                    {canEditRole && (
+                        <button onClick={() => setIsEditModalOpen(true)} className="flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-dark transition-colors">
+                            <Edit size={16} />
+                            <span>Edit Role</span>
+                        </button>
+                    )}
+                    {canManageRoles && (
+                        <button onClick={() => setIsAssignModalOpen(true)} className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">
+                            <UserPlus size={16} />
+                            <span>Assign User</span>
+                        </button>
+                    )}
                 </div>
             </div>
 

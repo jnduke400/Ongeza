@@ -159,48 +159,81 @@ const Sidebar: React.FC<{
             
             const dashboardIndex = adminItems.findIndex(item => 'href' in item && item.label === 'Dashboard');
             
-            // Create the new 'Users' link for admin
-            const usersLink: NavItem = {
-                href: '/users/list',
-                icon: <Users size={20} />,
-                label: 'Users'
-            };
-
-            const rolesAndPermissionsMenu: CollapsibleNavItem = {
-                isCollapsible: true,
-                label: 'Roles & Perms',
-                icon: <Shield size={20} />,
-                children: [
-                    { href: '/users/roles', label: 'Roles' },
-                    { href: '/users/permissions', label: 'Permissions' },
-                ]
-            };
+            // Check permissions for admin specific links
+            const canViewUsers = user?.permissions?.includes('VIEW_USERS');
+            const canOnboardUsers = user?.permissions?.includes('ONBOARD_USER');
             
-            const onboardingMenu: NavItem = {
-                href: '/onboarding/requests',
-                icon: <ClipboardList size={20} />,
-                label: 'Onboarding'
-            };
+            // Roles page is hidden if user has no VIEW_ROLES/MANAGE_ROLES OR if they have no CREATE_PERMISSION/EDIT_PERMISSION
+            const hasRolesViewPerm = user?.permissions?.includes('VIEW_ROLES') || user?.permissions?.includes('MANAGE_ROLES');
+            const hasPermsManagePerm = user?.permissions?.includes('CREATE_PERMISSION') || user?.permissions?.includes('EDIT_PERMISSION');
+            const canViewRoles = hasRolesViewPerm && hasPermsManagePerm;
+            const canViewPermissions = user?.permissions?.includes('VIEW_PERMISSIONS');
 
-            const reportsMenu: CollapsibleNavItem = {
-                isCollapsible: true,
-                label: 'Reports',
-                icon: <BarChart3 size={20} />,
-                children: [
-                    { href: '/reports/deposits', label: 'Deposits' },
-                    { href: '/reports/loans', label: 'Loans' },
-                    { href: '/reports/loan-repayments', label: 'Loan Repayments' },
-                    { href: '/reports/transactions', label: 'Transactions' },
-                    { href: '/reports/investments', label: 'Investments' },
-                ],
-            };
+            const itemsToAdd: (NavItem | CollapsibleNavItem)[] = [];
+
+            // Add 'Users' link if permitted
+            if (canViewUsers) {
+                itemsToAdd.push({
+                    href: '/users/list',
+                    icon: <Users size={20} />,
+                    label: 'Users'
+                });
+            }
+
+            // Add Roles & Perms based on permissions
+            const rolesPermsChildren = [];
+            if (canViewRoles) {
+                rolesPermsChildren.push({ href: '/users/roles', label: 'Roles' });
+            }
+            if (canViewPermissions) {
+                rolesPermsChildren.push({ href: '/users/permissions', label: 'Permissions' });
+            }
+
+            if (rolesPermsChildren.length > 0) {
+                itemsToAdd.push({
+                    isCollapsible: true,
+                    label: 'Roles & Perms',
+                    icon: <Shield size={20} />,
+                    children: rolesPermsChildren
+                });
+            }
+            
+            // Add 'Onboarding' link if permitted
+            if (canOnboardUsers) {
+                itemsToAdd.push({
+                    href: '/onboarding/requests',
+                    icon: <ClipboardList size={20} />,
+                    label: 'Onboarding'
+                });
+            }
+
+            // Add Reports menu
+            const reportsChildren = [];
+            if (user?.permissions?.includes('VIEW_DEPOSITS_REPORT')) {
+                reportsChildren.push({ href: '/reports/deposits', label: 'Deposits' });
+            }
+            reportsChildren.push({ href: '/reports/loans', label: 'Loans' });
+            reportsChildren.push({ href: '/reports/loan-repayments', label: 'Loan Repayments' });
+            if (user?.permissions?.includes('VIEW_TRANSACTIONS_REPORT')) {
+                reportsChildren.push({ href: '/reports/transactions', label: 'Transactions' });
+            }
+            reportsChildren.push({ href: '/reports/investments', label: 'Investments' });
+
+            if (reportsChildren.length > 0) {
+                itemsToAdd.push({
+                    isCollapsible: true,
+                    label: 'Reports',
+                    icon: <BarChart3 size={20} />,
+                    children: reportsChildren
+                });
+            }
 
             if (dashboardIndex !== -1) {
-                // Insert 'Users' link right after 'Dashboard', then 'Roles & Permissions'
-                adminItems.splice(dashboardIndex + 1, 0, usersLink, rolesAndPermissionsMenu, onboardingMenu, reportsMenu);
+                // Insert permitted links right after 'Dashboard'
+                adminItems.splice(dashboardIndex + 1, 0, ...itemsToAdd);
             } else {
                 // Fallback if dashboard isn't found
-                adminItems.unshift(usersLink, rolesAndPermissionsMenu, onboardingMenu, reportsMenu);
+                adminItems.unshift(...itemsToAdd);
             }
             
             return adminItems;
@@ -304,17 +337,32 @@ const Sidebar: React.FC<{
         
         if (user?.role === UserRole.PlatformAdmin) {
             items.push({ href: '/profile', icon: <User size={20} />, label: 'Profile' });
+            
+            const configChildren = [];
+            
+            if (user?.permissions?.includes('MODULE_CONFIGURATIONS')) {
+                configChildren.push({ href: '/configurations/module-configs', label: 'Module Configs' });
+            }
+
+            configChildren.push({ href: '/configurations/modules', label: 'Modules' });
+
+            if (user?.permissions?.includes('VIEW_DOCUMENT_TYPES')) {
+                configChildren.push({ href: '/configurations/document-types', label: 'Document Types' });
+            }
+
+            if (user?.permissions?.includes('VIEW_DOCUMENT_GROUPS')) {
+                configChildren.push({ href: '/configurations/document-groups', label: 'Document Groups' });
+            }
+
+            if (user?.permissions?.includes('VIEW_APPROVAL_FLOW')) {
+                configChildren.push({ href: '/configurations/approval-flows', label: 'Approval Flows' });
+            }
+
             items.push({
                 isCollapsible: true,
                 label: 'Configurations',
                 icon: <Settings size={20} />,
-                children: [
-                    { href: '/configurations/module-configs', label: 'Module Configs' },
-                    { href: '/configurations/modules', label: 'Modules' },
-                    { href: '/configurations/document-types', label: 'Document Types' },
-                    { href: '/configurations/document-groups', label: 'Document Groups' },
-                    { href: '/configurations/approval-flows', label: 'Approval Flows' },
-                ],
+                children: configChildren,
             });
         } else {
             items.push({ href: '/settings', icon: <Settings size={20} />, label: 'Settings' });

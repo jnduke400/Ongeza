@@ -9,6 +9,7 @@ import { UserForManagement, ApiRole as ApiRoleType, ApiPermission } from '../typ
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
 import { tanzaniaRegions, mockRegions } from '../services/mockData';
+import { useAuth } from '../contexts/AuthContext';
 
 type UserData = UserForManagement;
 type SortableKeys = keyof UserData | 'userName' | 'pinSet';
@@ -115,7 +116,7 @@ const UserCell: React.FC<{ user: UserData['user'] }> = ({ user }) => (
 const SortableTableHeader: React.FC<{
     label: string;
     columnKey: SortableKeys;
-    sortConfig: { key: string; direction: string };
+    sortConfig: { key: SortableKeys; direction: string };
     requestSort: (key: SortableKeys) => void;
     className?: string;
 }> = ({ label, columnKey, sortConfig, requestSort, className = '' }) => {
@@ -594,7 +595,7 @@ const DeleteConfirmationModal: React.FC<{
     );
 };
 
-const RoleCard: React.FC<{ role: ApiRoleType; onEdit: (role: ApiRoleType) => void; onDelete: (role: ApiRoleType) => void; }> = ({ role, onEdit, onDelete }) => {
+const RoleCard: React.FC<{ role: ApiRoleType; onEdit: (role: ApiRoleType) => void; onDelete: (role: ApiRoleType) => void; canDelete: boolean; canEdit: boolean; canViewDetails: boolean; }> = ({ role, onEdit, onDelete, canDelete, canEdit, canViewDetails }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
@@ -651,7 +652,9 @@ const RoleCard: React.FC<{ role: ApiRoleType; onEdit: (role: ApiRoleType) => voi
                 </div>
             </div>
             <h3 className="text-xl font-semibold mb-1 text-gray-800">{formatApiString(role.name)}</h3>
-            <button onClick={() => onEdit(role)} className="text-primary text-sm font-medium hover:underline">Edit Role</button>
+            {canEdit && (
+                <button onClick={() => onEdit(role)} className="text-primary text-sm font-medium hover:underline">Edit Role</button>
+            )}
             
             <div className="relative float-right" ref={menuRef}>
                 <button
@@ -665,26 +668,30 @@ const RoleCard: React.FC<{ role: ApiRoleType; onEdit: (role: ApiRoleType) => voi
                 {isMenuOpen && (
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-20 p-2 border border-gray-100" role="menu">
                         <ul className="text-sm text-gray-800 font-medium">
-                            <li>
-                                <button
-                                    onClick={handleViewDetails}
-                                    className="w-full text-left flex items-center px-3 py-2 hover:bg-gray-100 rounded-md"
-                                    role="menuitem"
-                                >
-                                    <Eye size={18} className="text-yellow-500 mr-3" />
-                                    <span>View Role Details</span>
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    onClick={handleDelete}
-                                    className="w-full text-left flex items-center px-3 py-2 hover:bg-gray-100 rounded-md"
-                                    role="menuitem"
-                                >
-                                    <Trash2 size={18} className="text-red-500 mr-3" />
-                                    <span>Delete Role</span>
-                                </button>
-                            </li>
+                            {canViewDetails && (
+                                <li>
+                                    <button
+                                        onClick={handleViewDetails}
+                                        className="w-full text-left flex items-center px-3 py-2 hover:bg-gray-100 rounded-md"
+                                        role="menuitem"
+                                    >
+                                        <Eye size={18} className="text-yellow-500 mr-3" />
+                                        <span>View Role Details</span>
+                                    </button>
+                                </li>
+                            )}
+                            {canDelete && (
+                                <li>
+                                    <button
+                                        onClick={handleDelete}
+                                        className="w-full text-left flex items-center px-3 py-2 hover:bg-gray-100 rounded-md"
+                                        role="menuitem"
+                                    >
+                                        <Trash2 size={18} className="text-red-500 mr-3" />
+                                        <span>Delete Role</span>
+                                    </button>
+                                </li>
+                            )}
                         </ul>
                     </div>
                 )}
@@ -860,34 +867,34 @@ const AddUserModal: React.FC<{
                         <h3 className="md:col-span-2 text-lg font-semibold pt-4 border-t mt-2">Address</h3>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Region</label>
-                            <select name="region" value={formData.region} onChange={handleRegionChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-primary outline-none">
+                            <select name="region" value={formData.region} onChange={handleRegionChange} required className="mt-1 w-full p-2 border border-gray-300 rounded-md">
                                 <option value="">Select Region</option>
                                 {mockRegions.map(r => <option key={r} value={r}>{r}</option>)}
                             </select>
                         </div>
                          <div>
                             <label className="block text-sm font-medium text-gray-700">District</label>
-                            <select name="district" value={formData.district} onChange={handleChange} required disabled={!formData.region} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white disabled:bg-gray-100 focus:ring-1 focus:ring-primary outline-none">
+                            <select name="district" value={formData.district} onChange={handleChange} required disabled={!formData.region} className="mt-1 w-full p-2 border border-gray-300 rounded-md disabled:bg-gray-100">
                                 <option value="">{formData.region ? 'Select District' : 'Select a region first'}</option>
                                 {districts.map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
                         </div>
                          <div>
                             <label className="block text-sm font-medium text-gray-700">Street</label>
-                            <input type="text" name="street" value={formData.street} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                            <input type="text" name="street" value={formData.street} onChange={handleChange} required className="mt-1 w-full p-2 border border-gray-300 rounded-md" />
                         </div>
                          <div>
                             <label className="block text-sm font-medium text-gray-700">Postal Code</label>
-                            <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                            <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} required className="mt-1 w-full p-2 border border-gray-300 rounded-md" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Country</label>
-                            <input type="text" name="country" value={formData.country} onChange={handleChange} required className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-primary outline-none" />
+                            <input type="text" name="country" value={formData.country} onChange={handleChange} required className="mt-1 w-full p-2 border border-gray-300 rounded-md" />
                         </div>
                     </div>
                 </div>
                 <div className="p-6 bg-gray-50 border-t flex justify-end space-x-3">
-                    <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">Cancel</button>
+                    <button type="button" onClick={onClose} className="bg-gray-200 text-gray-700 px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors">Cancel</button>
                     <button type="submit" disabled={isSaving} className="bg-primary text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-primary-dark disabled:bg-primary/50 flex items-center justify-center min-w-[120px] transition-colors">
                         {isSaving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : 'Add User'}
                     </button>
@@ -897,7 +904,17 @@ const AddUserModal: React.FC<{
     );
 };
 
+// Missing constant for category filters
+const categoryOptions = [
+    { label: 'Borrower', value: 'BORROWER' },
+    { label: 'Saver', value: 'SAVER' },
+    { label: 'Investor', value: 'INVESTOR' },
+    { label: 'Admin', value: 'ADMIN' },
+    { label: 'Group Admin', value: 'GROUP_ADMIN' },
+];
+
 const RolesPage: React.FC = () => {
+    const { user: currentUser } = useAuth();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -930,22 +947,45 @@ const RolesPage: React.FC = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [usersRefreshKey, setUsersRefreshKey] = useState(0);
 
+    // Missing definitions for selectedRows state and headerCheckboxRef
+    const [selectedRows, setSelectedRows] = useState<string[]>([]);
+    const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
     const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
     const [dateFilter, setDateFilter] = useState<{ start: string; end: string } | null>(null);
     const [isExporting, setIsExporting] = useState(false);
 
     const navigate = useNavigate();
-    
-    const categoryOptions = [
-        { label: 'Borrower', value: 'BORROWER' },
-        { label: 'Saver', value: 'SAVER' },
-        { label: 'Investor', value: 'INVESTOR' },
-        { label: 'Admin', value: 'ADMIN' },
-        { label: 'Group Admin', value: 'GROUP_ADMIN' },
-    ];
 
-    const [selectedRows, setSelectedRows] = useState<string[]>([]);
-    const headerCheckboxRef = useRef<HTMLInputElement>(null);
+    const canDelete = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('DELETE_USER');
+    }, [currentUser]);
+
+    const canCreateUser = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('CREATE_USER');
+    }, [currentUser]);
+
+    const canViewUsers = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('VIEW_USERS');
+    }, [currentUser]);
+
+    const canEditRole = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('EDIT_ROLE');
+    }, [currentUser]);
+
+    const canCreateRole = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('CREATE_ROLE');
+    }, [currentUser]);
+
+    const canViewRoles = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('VIEW_ROLES') || currentUser.permissions.includes('MANAGE_ROLES');
+    }, [currentUser]);
 
     const fetchAllData = async () => {
         setLoadingCardRoles(true);
@@ -977,7 +1017,8 @@ const RolesPage: React.FC = () => {
             setLoadingPermissions(true);
             setPermissionsError(null);
             try {
-                const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/permissions`);
+                // UPDATE: Adding size=50 to fetch more permissions for role configuration
+                const response = await interceptedFetch(`${API_BASE_URL}/api/v1/auth/permissions?size=50`);
                 if (!response.ok) throw new Error('Failed to fetch permissions');
                 const data: any = await response.json();
                 if (data.success && data.data && Array.isArray(data.data.content)) {
@@ -1059,8 +1100,10 @@ const RolesPage: React.FC = () => {
                 setLoadingUsers(false);
             }
         };
-        fetchUsers();
-    }, [currentPage, itemsPerPage, debouncedSearchQuery, sortConfig, filters, usersRefreshKey, dateFilter]);
+        if (canViewUsers) {
+            fetchUsers();
+        }
+    }, [currentPage, itemsPerPage, debouncedSearchQuery, sortConfig, filters, usersRefreshKey, dateFilter, canViewUsers]);
 
     const handleEditClick = (role: ApiRoleType) => { setEditingRole(role); setIsEditModalOpen(true); };
     const handleCloseModal = () => { setIsEditModalOpen(false); setEditingRole(null); };
@@ -1212,161 +1255,170 @@ const RolesPage: React.FC = () => {
                 <div className="text-center py-10 text-red-500">Error: {cardRolesError}</div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                    {cardRoles.map(role => <RoleCard key={role.id} role={role} onEdit={handleEditClick} onDelete={handleDeleteRoleClick} />)}
-                    <AddRoleCard onAdd={handleAddClick} />
+                    {cardRoles.map(role => <RoleCard key={role.id} role={role} onEdit={handleEditClick} onDelete={handleDeleteRoleClick} canDelete={!!canDelete} canEdit={canEditRole} canViewDetails={canViewRoles} />)}
+                    {canCreateRole && <AddRoleCard onAdd={handleAddClick} />}
                 </div>
             )}
 
-            <div className="mb-6">
-                <h2 className="text-xl font-bold text-gray-800">Total users with their roles</h2>
-                <p className="text-gray-500 mt-1">Find all of your company’s administrator accounts and their associate roles.</p>
-            </div>
-
-            <div className="bg-surface rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
-                <div className="mb-4">
-                    <p className="text-sm text-gray-500">
-                        Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalElements)} to {Math.min(currentPage * itemsPerPage, totalElements)} of {totalElements} entries
-                    </p>
-                </div>
-                
-                <div className="flex flex-wrap items-center gap-3 mb-6">
-                    <div className="relative flex-grow max-w-xs">
-                        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input 
-                            type="text" 
-                            placeholder="Search User" 
-                            value={searchQuery} 
-                            onChange={(e) => setSearchQuery(e.target.value)} 
-                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-primary focus:outline-none" 
-                        />
+            {canViewUsers && (
+                <>
+                    <div className="mb-6">
+                        <h2 className="text-xl font-bold text-gray-800">Total users with their roles</h2>
+                        <p className="text-gray-500 mt-1">Find all of your company’s administrator accounts and their associate roles.</p>
                     </div>
-                    
-                    <select 
-                        name="role" 
-                        value={filters.role}
-                        onChange={handleFilterChange} 
-                        className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary" 
-                        disabled={rolesDropdownLoading}
-                    >
-                        <option value="">Select Role</option>
-                        {roleOptions.map(option => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                    </select>
 
-                    <select 
-                        name="category" 
-                        value={filters.category}
-                        onChange={handleFilterChange} 
-                        className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                        <option value="">Select Category</option>
-                        {categoryOptions.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                    </select>
+                    <div className="bg-surface rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
+                        <div className="mb-4">
+                            <p className="text-sm text-gray-500">
+                                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalElements)} to {Math.min(currentPage * itemsPerPage, totalElements)} of {totalElements} entries
+                            </p>
+                        </div>
+                        
+                        <div className="flex flex-wrap items-center gap-3 mb-6">
+                            <div className="relative flex-grow max-w-xs">
+                                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Search User" 
+                                    value={searchQuery} 
+                                    onChange={(e) => setSearchQuery(e.target.value)} 
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-primary focus:outline-none" 
+                                />
+                            </div>
+                            
+                            <select 
+                                name="role" 
+                                value={filters.role}
+                                onChange={handleFilterChange} 
+                                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary" 
+                                disabled={rolesDropdownLoading}
+                            >
+                                <option value="">Select Role</option>
+                                {roleOptions.map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                            </select>
 
-                    <select 
-                        name="status" 
-                        value={filters.status}
-                        onChange={handleFilterChange} 
-                        className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                        <option value="">Select Status</option>
-                        <option value="PENDING">Pending</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="INACTIVE">Inactive</option>
-                    </select>
+                            <select 
+                                name="category" 
+                                value={filters.category}
+                                onChange={handleFilterChange} 
+                                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                            >
+                                <option value="">Select Category</option>
+                                {categoryOptions.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
 
-                    <button 
-                        onClick={() => setIsDateFilterOpen(true)} 
-                        className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors text-sm font-medium flex items-center space-x-2"
-                    >
-                        <SlidersHorizontal size={18} />
-                        <span>Filter</span>
-                    </button>
+                            <select 
+                                name="status" 
+                                value={filters.status}
+                                onChange={handleFilterChange} 
+                                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                            >
+                                <option value="">Select Status</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
 
-                    <button 
-                        onClick={clearFilters} 
-                        className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors text-sm font-medium"
-                    >
-                        Clear
-                    </button>
+                            <button 
+                                onClick={() => setIsDateFilterOpen(true)} 
+                                className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors text-sm font-medium flex items-center space-x-2"
+                            >
+                                <SlidersHorizontal size={18} />
+                                <span>Filter</span>
+                            </button>
 
-                    <button 
-                        onClick={handleExport} 
-                        disabled={isExporting}
-                        className="bg-gray-100 border border-gray-200 text-gray-800 px-4 py-2 rounded-lg flex items-center space-x-2 font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50"
-                    >
-                        {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                        <span>Export</span>
-                    </button>
+                            <button 
+                                onClick={clearFilters} 
+                                className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors text-sm font-medium"
+                            >
+                                Clear
+                            </button>
 
-                    <button 
-                        onClick={() => setIsAddUserModalOpen(true)} 
-                        className="bg-primary text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-semibold hover:bg-primary-dark transition-colors shadow-sm ml-auto"
-                    >
-                        <Plus size={16} />
-                        <span>Add New User</span>
-                    </button>
-                </div>
-                
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[900px]">
-                        <thead>
-                            <tr className="border-b border-gray-200">
-                                <th className="p-4 w-12"><input type="checkbox" ref={headerCheckboxRef} checked={areAllOnPageSelected} onChange={handleSelectAll} className="rounded" /></th>
-                                <SortableTableHeader label="User" columnKey="userName" sortConfig={sortConfig} requestSort={requestSort} />
-                                <SortableTableHeader label="Role" columnKey="role" sortConfig={sortConfig} requestSort={requestSort} />
-                                <SortableTableHeader label="Category" columnKey="category" sortConfig={sortConfig} requestSort={requestSort} />
-                                <SortableTableHeader label="Phone" columnKey="phone" sortConfig={sortConfig} requestSort={requestSort} />
-                                <SortableTableHeader label="PIN Status" columnKey="pinSet" sortConfig={sortConfig} requestSort={requestSort} />
-                                <SortableTableHeader label="Status" columnKey="status" sortConfig={sortConfig} requestSort={requestSort} />
-                                <th className="p-4 font-semibold text-xs uppercase text-gray-500">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loadingUsers ? (
-                                <TableSkeleton rows={itemsPerPage} />
-                            ) : usersError ? (
-                                <tr><td colSpan={8} className="text-center py-10 text-red-500">Error: {usersError}</td></tr>
-                            ) : users.length > 0 ? (
-                                users.map(user => (
-                                    <tr key={user.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50 text-sm">
-                                        <td className="p-4"><input type="checkbox" checked={selectedRows.includes(user.id)} onChange={() => handleRowSelect(user.id)} className="rounded"/></td>
-                                        <td className="p-4"><UserCell user={user.user} /></td>
-                                        <td className="p-4 text-gray-700"><RoleCell role={user.role} /></td>
-                                        <td className="p-4 text-gray-700">{user.category}</td>
-                                        <td className="p-4 text-gray-700">{user.phone}</td>
-                                        <td className="p-4"><PinStatusPill isSet={user.pinSet} /></td>
-                                        <td className="p-4"><StatusPill status={user.status} /></td>
-                                        <td className="p-4">
-                                            <div className="flex items-center space-x-2 text-gray-500">
-                                                <button className="hover:text-red-600"><Trash2 size={18}/></button>
-                                                <button onClick={() => navigate(`/users/${user.id}`)} className="hover:text-blue-600"><Eye size={18}/></button>
-                                                <button className="hover:text-gray-800"><MoreVertical size={18}/></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr><td colSpan={8} className="text-center py-10 text-gray-500">No users found matching your criteria.</td></tr>
+                            <button 
+                                onClick={handleExport} 
+                                disabled={isExporting}
+                                className="bg-gray-100 border border-gray-200 text-gray-800 px-4 py-2 rounded-lg flex items-center space-x-2 font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50"
+                            >
+                                {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                                <span>Export</span>
+                            </button>
+
+                            {canCreateUser && (
+                                <button 
+                                    onClick={() => setIsAddUserModalOpen(true)} 
+                                    className="bg-primary text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-semibold hover:bg-primary-dark transition-colors shadow-sm ml-auto"
+                                >
+                                    <Plus size={16} />
+                                    <span>Add New User</span>
+                                </button>
                             )}
-                        </tbody>
-                    </table>
-                </div>
+                        </div>
+                        
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[900px]">
+                                <thead>
+                                    <tr className="border-b border-gray-200">
+                                        <th className="p-4 w-12"><input type="checkbox" ref={headerCheckboxRef} checked={areAllOnPageSelected} onChange={handleSelectAll} className="rounded" /></th>
+                                        <SortableTableHeader label="User" columnKey="userName" sortConfig={sortConfig} requestSort={requestSort} />
+                                        <SortableTableHeader label="Role" columnKey="role" sortConfig={sortConfig} requestSort={requestSort} />
+                                        <SortableTableHeader label="Category" columnKey="category" sortConfig={sortConfig} requestSort={requestSort} />
+                                        <SortableTableHeader label="Phone" columnKey="phone" sortConfig={sortConfig} requestSort={requestSort} />
+                                        <SortableTableHeader label="PIN Status" columnKey="pinSet" sortConfig={sortConfig} requestSort={requestSort} />
+                                        <SortableTableHeader label="Status" columnKey="status" sortConfig={sortConfig} requestSort={requestSort} />
+                                        <th className="p-4 font-semibold text-xs uppercase text-gray-500">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loadingUsers ? (
+                                        <TableSkeleton rows={itemsPerPage} />
+                                    ) : usersError ? (
+                                        <tr><td colSpan={8} className="text-center p-8 text-red-500">Error: {usersError}</td></tr>
+                                    ) : users.length > 0 ? (
+                                        users.map(user => (
+                                            <tr key={user.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50 text-sm">
+                                                <td className="p-4"><input type="checkbox" checked={selectedRows.includes(user.id)} onChange={() => handleRowSelect(user.id)} className="rounded"/></td>
+                                                <td className="p-4"><UserCell user={user.user} /></td>
+                                                <td className="p-4 text-gray-700"><RoleCell role={user.role} /></td>
+                                                <td className="p-4 text-gray-700">{user.category}</td>
+                                                <td className="p-4 text-gray-700">{user.phone}</td>
+                                                <td className="p-4"><PinStatusPill isSet={user.pinSet} /></td>
+                                                <td className="p-4"><StatusPill status={user.status} /></td>
+                                                <td className="p-4">
+                                                    <div className="flex items-center space-x-2 text-gray-500">
+                                                        {canDelete && (
+                                                            <button className="hover:text-red-600"><Trash2 size={18}/></button>
+                                                        )}
+                                                        <button onClick={() => navigate(`/users/${user.id}`)} className="hover:text-blue-600"><Eye size={18}/></button>
+                                                        <button className="hover:text-gray-800"><MoreVertical size={18}/></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr><td colSpan={8} className="text-center py-10 text-gray-500">No users found matching your criteria.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
 
-                <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-                    <p>Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalElements)} to {Math.min(currentPage * itemsPerPage, totalElements)} of {totalElements} entries</p>
-                    <div className="flex items-center space-x-1">
-                        <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronLeft size={16} /></button>
-                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronLeft size={16} /></button>
-                        <span className="px-2 font-semibold text-gray-800">Page {currentPage} of {totalPages > 0 ? totalPages : 1}</span>
-                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
-                        <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
+                        <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
+                            <p>Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalElements)} to {Math.min(currentPage * itemsPerPage, totalElements)} of {totalElements} entries</p>
+                            <div className="flex items-center space-x-1">
+                                <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronLeft size={16} /></button>
+                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronLeft size={16} /></button>
+                                <span className="px-2 font-semibold text-gray-800">Page {currentPage} of {totalPages > 0 ? totalPages : 1}</span>
+                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
+                                <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage >= totalPages || totalPages === 0} className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 transition-colors"><ChevronRight size={16} /></button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
+                </>
+            )}
+            
             <EditRoleModal 
                 isOpen={isEditModalOpen} 
                 onClose={handleCloseModal} 

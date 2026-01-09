@@ -4,6 +4,7 @@ import { Shield, Bell, MoreVertical, Search, ChevronLeft, ChevronRight, Target, 
 import { UserDetail, UserGoal } from '../types';
 import { API_BASE_URL } from '../services/apiConfig';
 import { interceptedFetch } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface DeviceData {
     id: number;
@@ -151,6 +152,7 @@ const UserInfoCard: React.FC<{
     isActivating: boolean;
     isSuspending: boolean;
 }> = ({ user, totalSuccessfulDeposits, totalApprovals, totalGoals, onActivate, onSuspend, isActivating, isSuspending }) => {
+    const { user: currentUser } = useAuth();
     const categoryRaw = user.category?.toUpperCase() || '';
     const isSaver = categoryRaw === 'SAVER';
     const isAdmin = categoryRaw === 'ADMIN' || categoryRaw === 'PLATFORM_ADMIN';
@@ -161,6 +163,9 @@ const UserInfoCard: React.FC<{
     const activityStatus = user.status?.toUpperCase() || '';
     const isActive = activityStatus === 'ACTIVE';
     const isSuspended = activityStatus === 'SUSPENDED';
+
+    const canActivate = currentUser?.permissions?.includes('ACTIVATE_USER');
+    const canSuspend = currentUser?.permissions?.includes('SUSPEND_USER');
 
     return (
         <div className="bg-surface p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
@@ -209,28 +214,32 @@ const UserInfoCard: React.FC<{
             </div>
             
             <div className="mt-8 flex space-x-3">
-                <button 
-                    onClick={onActivate}
-                    disabled={isActive || isActivating}
-                    className={`flex-1 font-bold py-3 rounded-xl transition-all flex items-center justify-center shadow-sm ${
-                        isActive 
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none' 
-                        : 'bg-primary text-white hover:bg-primary-dark active:scale-95'
-                    }`}
-                >
-                    {isActivating ? <Loader2 size={18} className="animate-spin" /> : 'Activate'}
-                </button>
-                <button 
-                    onClick={onSuspend}
-                    disabled={isSuspended || isSuspending}
-                    className={`flex-1 font-bold py-3 rounded-xl transition-all border flex items-center justify-center ${
-                        isSuspended
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                        : 'bg-white text-red-600 border-red-100 hover:bg-red-50 active:scale-95'
-                    }`}
-                >
-                    Suspend
-                </button>
+                {canActivate && (
+                    <button 
+                        onClick={onActivate}
+                        disabled={isActive || isActivating}
+                        className={`flex-1 font-bold py-3 rounded-xl transition-all flex items-center justify-center shadow-sm ${
+                            isActive 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none' 
+                            : 'bg-primary text-white hover:bg-primary-dark active:scale-95'
+                        }`}
+                    >
+                        {isActivating ? <Loader2 size={18} className="animate-spin" /> : 'Activate'}
+                    </button>
+                )}
+                {canSuspend && (
+                    <button 
+                        onClick={onSuspend}
+                        disabled={isSuspended || isSuspending}
+                        className={`flex-1 font-bold py-3 rounded-xl transition-all border flex items-center justify-center ${
+                            isSuspended
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                            : 'bg-white text-red-600 border-red-100 hover:bg-red-50 active:scale-95'
+                        }`}
+                    >
+                        Suspend
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -430,12 +439,18 @@ const SecurityTabContent: React.FC<{
     userId: string;
     onPinReset: () => void;
 }> = ({ pinSet, userId, onPinReset }) => {
+    const { user: currentUser } = useAuth();
     const [isResetting, setIsResetting] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
     const [devices, setDevices] = useState<DeviceData[]>([]);
     const [loadingDevices, setLoadingDevices] = useState(true);
+
+    const canUnlockPin = useMemo(() => {
+        if (!currentUser || !currentUser.permissions || !Array.isArray(currentUser.permissions)) return false;
+        return currentUser.permissions.includes('UNLOCK_PIN');
+    }, [currentUser]);
 
     useEffect(() => {
         const fetchDevices = async () => {
@@ -498,41 +513,43 @@ const SecurityTabContent: React.FC<{
     return (
         <div className="space-y-6">
             {/* Reset PIN Section */}
-            <div className="bg-surface p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex items-center space-x-2 mb-2">
-                    <Shield className="text-primary" size={20} />
-                    <h3 className="text-lg font-bold text-gray-800">Reset PIN</h3>
-                </div>
-                <p className="text-sm text-gray-500 mb-6">
-                    Manage the security PIN for this specific user. Initiating a reset will trigger a security workflow for the user to configure a new code.
-                </p>
-                
-                <div className="flex items-center justify-between bg-gray-50 p-5 rounded-xl border border-gray-200">
-                    <div className="flex items-center space-x-4">
-                        <div className={`p-3 rounded-full shadow-sm ${pinSet ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
-                            {pinSet ? <CheckCircle size={24} /> : <AlertTriangle size={24} />} 
-                        </div>
-                        <div>
-                            <p className="font-bold text-gray-900">PIN Status: {pinSet ? 'Active PIN Configured' : 'No Active PIN'}</p>
-                            <p className="text-xs text-gray-500 font-medium">
-                                {pinSet ? 'User has an active and secure transaction PIN.' : 'The user has not set up their security PIN yet.'}
-                            </p>
-                        </div>
+            {canUnlockPin && (
+                <div className="bg-surface p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex items-center space-x-2 mb-2">
+                        <Shield className="text-primary" size={20} />
+                        <h3 className="text-lg font-bold text-gray-800">Reset PIN</h3>
                     </div>
-                    <button 
-                        onClick={handleResetPinInitiate} 
-                        disabled={!pinSet || isResetting}
-                        className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-all flex items-center ${
-                            !pinSet || isResetting 
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed border-none' 
-                            : 'bg-white border border-red-200 text-red-600 hover:bg-red-50 active:scale-95'
-                        }`}
-                    >
-                        {isResetting && <Loader2 size={14} className="animate-spin mr-2" />}
-                        Reset PIN
-                    </button>
+                    <p className="text-sm text-gray-500 mb-6">
+                        Manage the security PIN for this specific user. Initiating a reset will trigger a security workflow for the user to configure a new code.
+                    </p>
+                    
+                    <div className="flex items-center justify-between bg-gray-50 p-5 rounded-xl border border-gray-200">
+                        <div className="flex items-center space-x-4">
+                            <div className={`p-3 rounded-full shadow-sm ${pinSet ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
+                                {pinSet ? <CheckCircle size={24} /> : <AlertTriangle size={24} />} 
+                            </div>
+                            <div>
+                                <p className="font-bold text-gray-900">PIN Status: {pinSet ? 'Active PIN Configured' : 'No Active PIN'}</p>
+                                <p className="text-xs text-gray-500 font-medium">
+                                    {pinSet ? 'User has an active and secure transaction PIN.' : 'The user has not set up their security PIN yet.'}
+                                </p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={handleResetPinInitiate} 
+                            disabled={!pinSet || isResetting}
+                            className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-all flex items-center ${
+                                !pinSet || isResetting 
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed border-none' 
+                                : 'bg-white border border-red-200 text-red-600 hover:bg-red-50 active:scale-95'
+                            }`}
+                        >
+                            {isResetting && <Loader2 size={14} className="animate-spin mr-2" />}
+                            Reset PIN
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Recent devices Section */}
             <div className="bg-surface p-6 rounded-2xl shadow-sm border border-gray-100">
@@ -637,6 +654,7 @@ const SecurityTabContent: React.FC<{
 
 const UserDetailPage: React.FC = () => {
     const { userId } = useParams<{ userId: string }>();
+    const { user: currentUser } = useAuth();
     const [user, setUser] = useState<UserDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

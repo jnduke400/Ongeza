@@ -111,6 +111,7 @@ export interface User {
   loginCount?: number;
   currency?: string;
   gender?: string;
+  permissions?: string[];
 }
 
 export interface LoanApplication {
