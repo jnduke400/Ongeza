@@ -414,7 +414,7 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string }> =
 };
 
 const SaverDashboard: React.FC = () => {
-    const { user } = useAuth();
+    const { user, refreshUserProfile } = useAuth();
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [showCelebration, setShowCelebration] = useState(false);
@@ -422,6 +422,9 @@ const SaverDashboard: React.FC = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
+                // Fetch the latest user profile to refresh goals count and rate used by the banner
+                await refreshUserProfile();
+
                 const response = await interceptedFetch(`${API_BASE_URL}/api/v1/savings/dashboard`);
                 const data = await response.json();
                 if (data.success) {
@@ -440,7 +443,7 @@ const SaverDashboard: React.FC = () => {
             }
         };
         fetchDashboardData();
-    }, [user]);
+    }, [user?.id]); // Depend on user id to refresh when switching users, but mainly for mount
 
     const chartData = useMemo(() => {
         if (!dashboardData?.chartData) return [];
