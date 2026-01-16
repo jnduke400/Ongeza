@@ -1,10 +1,9 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
     BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, Tooltip,
 } from 'recharts';
 import {
-    MoreHorizontal, ArrowUpRight, Upload, FileText, ChevronRight, Download, ChevronDown, AlertCircle, ShoppingBag, ArrowDownRight,
+    MoreHorizontal, ArrowUpRight, Upload, FileText, ChevronRight, Download, ChevronDown, AlertCircle, ShoppingBag, ArrowDownRight, X, Smartphone, CheckCircle2, XCircle, Loader2, Info, Wallet, AlignLeft
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { isUserInAnyGroup } from '../services/mockData';
@@ -72,8 +71,197 @@ const formatDate = (dateString: string) => {
     });
 };
 
+// --- WITHDRAWAL MODAL COMPONENT ---
+const WithdrawalModal: React.FC<{ 
+    isOpen: boolean; 
+    onClose: () => void; 
+    availableBalance: number;
+    currency: string;
+    onSuccess: (updatedWallet: WalletData) => void;
+}> = ({ isOpen, onClose, availableBalance, currency, onSuccess }) => {
+    const [amount, setAmount] = useState('');
+    const [withdrawalType, setWithdrawalType] = useState<'INSTANT' | 'SCHEDULED'>('INSTANT');
+    const [msisdn, setMsisdn] = useState('');
+    const [description, setDescription] = useState('Withdrawal to mobile money');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [status, setStatus] = useState<'IDLE' | 'SUCCESS' | 'ERROR'>('IDLE');
+    const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) {
+            setAmount('');
+            setWithdrawalType('INSTANT');
+            setStatus('IDLE');
+            setMessage('');
+            setDescription('Withdrawal to mobile money');
+        }
+    }, [isOpen]);
+
+    const handleWithdraw = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setStatus('IDLE');
+
+        try {
+            const response = await interceptedFetch(`${API_BASE_URL}/api/v1/wallet/withdraw`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: parseFloat(amount),
+                    withdrawalType,
+                    msisdn: msisdn.startsWith('255') ? msisdn : `255${msisdn.replace(/^0+/, '')}`,
+                    description
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setStatus('SUCCESS');
+                setMessage(result.message || 'Withdrawal processed successfully!');
+                setTimeout(() => {
+                    onSuccess(result.data);
+                    onClose();
+                }, 2000);
+            } else {
+                setStatus('ERROR');
+                setMessage(result.message || 'Transaction failed.');
+            }
+        } catch (error: any) {
+            setStatus('ERROR');
+            setMessage('Network error. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-gray-100">
+                <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h2 className="text-xl font-bold text-gray-800">Funds Withdrawal</h2>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full text-gray-400 transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="p-8">
+                    {status === 'SUCCESS' ? (
+                        <div className="text-center py-10 animate-in zoom-in">
+                            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mx-auto mb-4">
+                                <CheckCircle2 size={48} />
+                            </div>
+                            <h3 className="text-2xl font-bold text-gray-800">Done!</h3>
+                            <p className="text-gray-500 mt-2">{message}</p>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleWithdraw} className="space-y-6">
+                            <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Available Balance</p>
+                                    <p className="text-xl font-bold text-indigo-900">{currency} {availableBalance.toLocaleString()}</p>
+                                </div>
+                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+                                    <Wallet size={20} />
+                                </div>
+                            </div>
+
+                            {status === 'ERROR' && (
+                                <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start space-x-3 animate-in shake duration-300">
+                                    <XCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                                    <p className="text-sm text-red-700 font-medium leading-relaxed">{message}</p>
+                                </div>
+                            )}
+
+                            <div className="space-y-4 max-h-[400px] overflow-y-auto px-1 custom-scrollbar">
+                                <div>
+                                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Amount to withdraw</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="number" 
+                                            required
+                                            value={amount}
+                                            onChange={e => setAmount(e.target.value)}
+                                            placeholder="0.00"
+                                            className="w-full h-14 bg-gray-50 border border-gray-200 rounded-xl px-4 text-lg font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                        />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">{currency}</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Mobile Number (M-Pesa/Tigo)</label>
+                                    <div className="relative">
+                                        <Smartphone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input 
+                                            type="tel" 
+                                            required
+                                            value={msisdn}
+                                            onChange={e => setMsisdn(e.target.value.replace(/[^0-9]/g, ''))}
+                                            placeholder="07XXXXXXXX"
+                                            className="w-full h-14 bg-gray-50 border border-gray-200 rounded-xl pl-12 pr-4 text-base font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Reason for Withdrawal</label>
+                                    <div className="relative">
+                                        <AlignLeft size={18} className="absolute left-4 top-4 text-gray-400" />
+                                        <textarea 
+                                            rows={2}
+                                            value={description}
+                                            onChange={e => setDescription(e.target.value)}
+                                            placeholder="Purpose of this withdrawal..."
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-12 pr-4 py-3 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setWithdrawalType('INSTANT')}
+                                        className={`py-3 rounded-xl border-2 font-bold text-sm transition-all ${withdrawalType === 'INSTANT' ? 'bg-primary/10 border-primary text-primary' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                                    >
+                                        Instant
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setWithdrawalType('SCHEDULED')}
+                                        className={`py-3 rounded-xl border-2 font-bold text-sm transition-all ${withdrawalType === 'SCHEDULED' ? 'bg-primary/10 border-primary text-primary' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'}`}
+                                    >
+                                        Scheduled
+                                    </button>
+                                </div>
+
+                                {withdrawalType === 'SCHEDULED' && (
+                                    <div className="flex items-start space-x-2 text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-100 animate-in slide-in-from-top-2">
+                                        <Info size={16} className="shrink-0 mt-0.5" />
+                                        <p className="text-[11px] font-medium leading-relaxed">Scheduled withdrawals are free once a month but take 24-48 hours to process.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                disabled={isSubmitting || !amount || !msisdn}
+                                className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-2xl shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center space-x-2 disabled:bg-gray-100 disabled:text-gray-300 disabled:shadow-none"
+                            >
+                                {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <span>Authorize Withdrawal</span>}
+                            </button>
+                        </form>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Wallet Balance Card
-const WalletBalanceCard: React.FC<{ wallet: WalletData | null }> = ({ wallet }) => {
+const WalletBalanceCard: React.FC<{ wallet: WalletData | null; onWithdrawClick: () => void }> = ({ wallet, onWithdrawClick }) => {
     const trend = wallet?.balanceTrend || '0%';
     const isPositive = !trend.startsWith('-');
 
@@ -97,7 +285,10 @@ const WalletBalanceCard: React.FC<{ wallet: WalletData | null }> = ({ wallet }) 
                     <p className="text-xs mt-2 font-medium text-gray-600">Transfer</p>
                 </div>
                 <div>
-                    <button className="w-12 h-12 flex items-center justify-center bg-gray-100 rounded-full text-primary hover:bg-primary-light/50 transition-colors">
+                    <button 
+                        onClick={onWithdrawClick}
+                        className="w-12 h-12 flex items-center justify-center bg-gray-100 rounded-full text-primary hover:bg-primary-light/50 transition-colors"
+                    >
                         <Download size={20} />
                     </button>
                     <p className="text-xs mt-2 font-medium text-gray-600">Withdrawal</p>
@@ -296,23 +487,30 @@ const LatestTransactionCard: React.FC<{ transactions: WalletTransaction[] }> = (
 // Weekly Summary Card
 const WeeklySummaryCard: React.FC<{ wallet: WalletData | null; stats: WalletStats | null }> = ({ wallet, stats }) => {
     
-    // Calculate percentages
-    const balance = wallet?.availableBalance || 1; // Prevent division by zero
+    // Calculate total base for percentage comparison among the three fields
     const interest = stats?.totalInterest || 0;
     const savings = stats?.totalSavings || 0;
-    const reward = stats?.totalRewards || 0;
+    const rewards = stats?.totalRewards || 0;
     
-    // Pie data logic
+    // Sum of these three components defines the comparative base
+    const totalComponents = interest + savings + rewards;
+    const denominator = totalComponents || 1; // Prevent division by zero
+
+    // Pie data logic: Compare Interest, Savings, and Reward against their combined sum
     const pieData = [
-        { name: 'Interest', value: Math.round((interest / balance) * 100), color: '#FDBA74' },
-        { name: 'Savings', value: Math.round((savings / balance) * 100), color: '#F87171' },
-        { name: 'Reward', value: Math.round((reward / balance) * 100), color: '#D1D5DB' },
+        { name: 'Interest', value: Math.round((interest / denominator) * 100), color: '#FDBA74' },
+        { name: 'Savings', value: Math.round((savings / denominator) * 100), color: '#F87171' },
+        { name: 'Reward', value: Math.round((rewards / denominator) * 100), color: '#D1D5DB' },
     ];
     
-    // Ensure pie chart renders even if values are small or 0, by using remaining percentage
-    const totalPie = pieData.reduce((acc, curr) => acc + curr.value, 0);
-    if (totalPie < 100) {
-        pieData.push({ name: 'Other', value: 100 - totalPie, color: 'transparent' });
+    // Ensure pie chart renders even if values are small or 0, by checking if we have data
+    const totalPercentage = pieData.reduce((acc, curr) => acc + curr.value, 0);
+    if (totalPercentage === 0) {
+        // Fallback for empty state to show a gray ring
+        pieData.push({ name: 'Other', value: 100, color: '#F3F4F6' });
+    } else if (totalPercentage < 100 && totalPercentage > 0) {
+         // Adjust rounding errors
+         pieData[1].value += (100 - totalPercentage);
     }
 
     // Bar chart data from weekly summary
@@ -356,15 +554,15 @@ const WeeklySummaryCard: React.FC<{ wallet: WalletData | null; stats: WalletStat
             <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                        <Pie data={pieData} dataKey="value" innerRadius={40} outerRadius={60} startAngle={90} endAngle={450} stroke="none">
-                            {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                        <Pie data={pieData.filter(i => i.value > 0)} dataKey="value" innerRadius={40} outerRadius={60} startAngle={90} endAngle={450} stroke="none">
+                            {pieData.filter(i => i.value > 0).map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                         </Pie>
                         <Tooltip content={<CustomWalletPieTooltip />} />
                     </PieChart>
                 </ResponsiveContainer>
             </div>
             <div className="mt-4 space-y-2">
-                {pieData.filter(i => i.color !== 'transparent').map(item => (
+                {pieData.filter(i => i.name !== 'Other').map(item => (
                     <div key={item.name} className="flex justify-between items-center text-sm">
                         <div className="flex items-center"><span className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: item.color }}></span><span className="text-gray-500">{item.name}</span></div>
                         <span className="font-semibold text-gray-700">{item.value}%</span>
@@ -449,41 +647,48 @@ const MyWalletPage: React.FC = () => {
     const [stats, setStats] = useState<WalletStats | null>(null);
     const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isWithdrawalOpen, setIsWithdrawalOpen] = useState(false);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            // 1. Fetch Wallet Data
+            const walletRes = await interceptedFetch(`${API_BASE_URL}/api/v1/wallet`);
+            const walletData = await walletRes.json();
+            if (walletData.success) {
+                setWallet(walletData.data);
+            }
+
+            // 2. Fetch Wallet Stats
+            const statsRes = await interceptedFetch(`${API_BASE_URL}/api/v1/wallet/stats`);
+            const statsData = await statsRes.json();
+            if (statsData.success) {
+                setStats(statsData.data);
+            }
+
+            // 3. Fetch Wallet Transactions
+            const txRes = await interceptedFetch(`${API_BASE_URL}/api/v1/wallet/transactions?page=0&size=5`);
+            const txData = await txRes.json();
+            if (txData.success && txData.data && Array.isArray(txData.data.content)) {
+                setTransactions(txData.data.content);
+            }
+
+        } catch (error) {
+            console.error("Error fetching wallet data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                // 1. Fetch Wallet Data
-                const walletRes = await interceptedFetch(`${API_BASE_URL}/api/v1/wallet`);
-                const walletData = await walletRes.json();
-                if (walletData.success) {
-                    setWallet(walletData.data);
-                }
-
-                // 2. Fetch Wallet Stats
-                const statsRes = await interceptedFetch(`${API_BASE_URL}/api/v1/wallet/stats`);
-                const statsData = await statsRes.json();
-                if (statsData.success) {
-                    setStats(statsData.data);
-                }
-
-                // 3. Fetch Wallet Transactions
-                const txRes = await interceptedFetch(`${API_BASE_URL}/api/v1/wallet/transactions?page=0&size=5`);
-                const txData = await txRes.json();
-                if (txData.success && txData.data && Array.isArray(txData.data.content)) {
-                    setTransactions(txData.data.content);
-                }
-
-            } catch (error) {
-                console.error("Error fetching wallet data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchData();
     }, []);
+
+    const handleWithdrawalSuccess = (updatedWallet: WalletData) => {
+        setWallet(updatedWallet);
+        // Refresh transactions and stats to reflect the new state
+        fetchData();
+    };
 
 
     const shouldShowBadgesCard = useMemo(() => {
@@ -529,8 +734,11 @@ const MyWalletPage: React.FC = () => {
         ];
     }, [stats, wallet]);
 
-    if (loading) {
-        return <div className="p-8 text-center">Loading wallet information...</div>;
+    if (loading && !wallet) {
+        return <div className="p-8 text-center flex flex-col items-center justify-center h-64 space-y-4">
+            <Loader2 className="animate-spin text-primary" size={40} />
+            <p className="text-gray-500 font-medium">Loading wallet information...</p>
+        </div>;
     }
 
     return (
@@ -538,7 +746,12 @@ const MyWalletPage: React.FC = () => {
             {/* Left side (col-span-2) */}
             <div className="xl:col-span-2 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="md:col-span-1"><WalletBalanceCard wallet={wallet} /></div>
+                    <div className="md:col-span-1">
+                        <WalletBalanceCard 
+                            wallet={wallet} 
+                            onWithdrawClick={() => setIsWithdrawalOpen(true)}
+                        />
+                    </div>
                     <div className="md:col-span-2"><MainBalanceCard wallet={wallet} /></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -552,6 +765,15 @@ const MyWalletPage: React.FC = () => {
                 <WeeklySummaryCard wallet={wallet} stats={stats} />
                 {shouldShowBadgesCard ? <EarnBadgesCard /> : <RecentContributorsCard contributors={stats?.recentContributors || []} />}
             </div>
+
+            {/* Global Withdrawal Modal */}
+            <WithdrawalModal 
+                isOpen={isWithdrawalOpen} 
+                onClose={() => setIsWithdrawalOpen(false)} 
+                availableBalance={wallet?.availableBalance || 0}
+                currency={wallet?.currency || 'TZS'}
+                onSuccess={handleWithdrawalSuccess}
+            />
         </div>
     );
 };

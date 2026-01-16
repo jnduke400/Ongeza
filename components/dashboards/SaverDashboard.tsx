@@ -85,7 +85,6 @@ const ConfettiRain: React.FC = () => {
                 }
                 `}
             </style>
-            {/* FIX: Changed 'i % 2 === 0' to 'p.id % 2 === 0' to fix the "Cannot find name 'i'" error. */}
             {particles.map(p => (
                 <div
                     key={p.id}
@@ -343,7 +342,7 @@ const GoalCard: React.FC<{ iconStr: string; title: string; subtitle: string; cur
     );
 };
 
-const RightSidebarContent: React.FC<{ transactions: any[], currency: string }> = ({ transactions, currency }) => {
+const RightSidebarContent: React.FC<{ transactions: any[], currency: string, timezone?: string }> = ({ transactions, currency, timezone }) => {
     const getStatusColor = (status: string) => {
         const normalizedStatus = status ? status.toUpperCase() : '';
         switch (normalizedStatus) {
@@ -356,15 +355,33 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string }> =
     };
 
     const formatTransactionDate = (dateString: string) => {
-        const date = new Date(dateString);
+        if (!dateString) return 'N/A';
+        
+        // Backend provides UTC, we need to convert to local display date
+        let date = new Date(dateString);
+
+        if (timezone) {
+            try {
+                // Parse format like "(GMT+03:00) Nairobi"
+                const match = timezone.match(/GMT([+-]\d{2}):(\d{2})/);
+                if (match) {
+                    const hoursOffset = parseInt(match[1], 10);
+                    const minutesOffset = parseInt(match[2], 10);
+                    // Total shift in minutes
+                    const totalOffsetMinutes = (hoursOffset * 60) + (hoursOffset < 0 ? -minutesOffset : minutesOffset);
+                    
+                    // Create a UTC-relative date and add the offset
+                    const utcMs = date.getTime() + (date.getTimezoneOffset() * 60000);
+                    date = new Date(utcMs + (totalOffsetMinutes * 60000));
+                }
+            } catch (err) {
+                console.warn("Timezone calculation fallback", err);
+            }
+        }
+
         const now = new Date();
         const yesterday = new Date();
         yesterday.setDate(now.getDate() - 1);
-
-        const diffMs = now.getTime() - date.getTime();
-        const diffMin = Math.floor(diffMs / 60000);
-
-        if (diffMin < 1) return 'now';
 
         const isToday = date.toDateString() === now.toDateString();
         const isYesterday = date.toDateString() === yesterday.toDateString();
@@ -423,6 +440,7 @@ const SaverDashboard: React.FC = () => {
         const fetchDashboardData = async () => {
             try {
                 // Fetch the latest user profile to refresh goals count and rate used by the banner
+                // This call also updates the 'user' object in context which contains the timezone
                 await refreshUserProfile();
 
                 const response = await interceptedFetch(`${API_BASE_URL}/api/v1/savings/dashboard`);
@@ -490,7 +508,12 @@ const SaverDashboard: React.FC = () => {
                     </div>
                 </div>
                 <div className="lg:col-span-1 space-y-6 xl:space-y-8">
-                    <RightSidebarContent transactions={recentTransactions.slice(0, 5)} currency={summary.currency} />
+                    {/* FIX: Cast user object to 'any' to resolve 'Property timezone does not exist' compilation error. */}
+                    <RightSidebarContent 
+                        transactions={recentTransactions.slice(0, 5)} 
+                        currency={summary.currency} 
+                        timezone={(user as any)?.timezone}
+                    />
                 </div>
             </div>
         </div>
