@@ -19,7 +19,7 @@ const LandingPage: React.FC = () => {
       {/* Header */}
       <header className="bg-surface shadow-sm">
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="text-2xl font-bold text-primary">PesaFlow</div>
+          <div className="text-2xl font-bold text-primary">Ongeza</div>
           <div>
             <Link to="/login" className="text-gray-600 hover:text-primary mr-4">Log In</Link>
             <Link to="/onboarding" className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-full transition-colors duration-300">
@@ -34,19 +34,19 @@ const LandingPage: React.FC = () => {
         <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 leading-tight">
           Financial Growth for Everyone in Tanzania.
         </h1>
-        <h2 className="text-xl font-bold text-primary mt-2">PesaFlow Micro-Lending & Savings</h2>
+        <h2 className="text-xl font-bold text-primary mt-2">Ongeza Micro-Lending & Savings</h2>
         <p className="mt-4 text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-          Securely save, access fair loans, and invest in your community's future. PesaFlow makes managing your money simple, accessible, and rewarding.
+          Securely save, access fair loans, and invest in your community's future. Ongeza makes managing your money simple, accessible, and rewarding.
         </p>
         <Link to="/onboarding" className="mt-8 inline-flex items-center bg-primary hover:bg-primary-dark text-white font-bold py-3 px-8 rounded-full text-lg transition-colors duration-300 shadow-lg">
-          Join PesaFlow Today <ArrowRight className="ml-2 h-5 w-5" />
+          Join Ongeza Today <ArrowRight className="ml-2 h-5 w-5" />
         </Link>
       </main>
 
       {/* Features Section */}
       <section className="bg-sky-100 py-20">
         <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">How PesaFlow Empowers You</h2>
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">How Ongeza Empowers You</h2>
           <div className="grid md:grid-cols-3 gap-8">
             <FeatureCard
               icon={<TrendingUp size={24} />}
@@ -98,7 +98,7 @@ const LandingPage: React.FC = () => {
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-1 md:col-span-2">
-              <div className="text-2xl font-bold text-primary mb-4">PesaFlow</div>
+              <div className="text-2xl font-bold text-primary mb-4">Ongeza</div>
               <p className="text-gray-400 max-w-sm">Empowering Tanzanian entrepreneurs and individuals through accessible and affordable micro-financial services.</p>
             </div>
             <div>
@@ -119,7 +119,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
           <div className="border-t border-gray-700 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-gray-500 text-sm">&copy; 2025 PesaFlow. All rights reserved.</p>
+            <p className="text-gray-500 text-sm">&copy; 2025 Ongeza. All rights reserved.</p>
             <div className="flex items-center space-x-4">
               <Link to="/reset-password?token=123456" className="text-xs text-gray-600 hover:text-gray-400 border border-gray-700 px-3 py-1 rounded transition-colors">
                 Simulation: Password Reset

@@ -135,7 +135,7 @@ const TwoFactorAuthPage: React.FC = () => {
                 <div className="text-center mb-8">
                     <div className="flex justify-center items-center gap-2 mb-4">
                         <CircleDollarSign size={32} className="text-primary" />
-                        <h1 className="text-3xl font-bold text-primary">PesaFlow</h1>
+                        <h1 className="text-3xl font-bold text-primary">Ongeza</h1>
                     </div>
                     <h2 className="text-2xl font-bold text-gray-800">Two-Factor Verification</h2>
                     <p className="text-gray-500 mt-2">Please enter the 6-digit code sent to your device to complete your login.</p>

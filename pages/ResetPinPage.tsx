@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 // FIX: Added missing Loader2 import from lucide-react to fix compilation error.
@@ -108,7 +107,7 @@ const ResetPinPage: React.FC = () => {
                 <div className="text-center mb-8">
                      <div className="flex justify-center items-center gap-2 mb-4">
                         <CircleDollarSign size={32} className="text-primary" />
-                        <h1 className="text-3xl font-bold text-primary">PesaFlow</h1>
+                        <h1 className="text-3xl font-bold text-primary">Ongeza</h1>
                     </div>
                     <h2 className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">Reset PIN <ShieldCheck size={22} className="text-primary" /></h2>
                     <p className="text-gray-500 mt-2">Enter your new 4-digit security PIN.</p>

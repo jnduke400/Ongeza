@@ -206,8 +206,8 @@ const OnboardingPage: React.FC = () => {
         <div className="bg-background min-h-screen py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-2xl mx-auto">
                 <div className="text-center mb-10">
-                    <h1 className="text-3xl font-extrabold text-gray-900">Create your Saver Account</h1>
-                    <p className="mt-2 text-lg text-gray-600">Join PesaFlow and start your savings journey today.</p>
+                    <h1 className="text-3xl font-extrabold text-gray-900">Create your Ongeza Account</h1>
+                    <p className="mt-2 text-lg text-gray-600">Join Ongeza and start your savings journey today.</p>
                 </div>
                 
                 {step < 3 && (

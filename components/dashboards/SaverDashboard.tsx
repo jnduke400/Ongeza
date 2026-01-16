@@ -357,47 +357,55 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string, tim
     const formatTransactionDate = (dateString: string) => {
         if (!dateString) return 'N/A';
         
-        // Backend provides UTC, we need to convert to local display date
         let date = new Date(dateString);
 
         if (timezone) {
             try {
-                // Parse format like "(GMT+03:00) Nairobi"
-                const match = timezone.match(/GMT([+-]\d{2}):(\d{2})/);
-                if (match) {
-                    const hoursOffset = parseInt(match[1], 10);
-                    const minutesOffset = parseInt(match[2], 10);
-                    // Total shift in minutes
-                    const totalOffsetMinutes = (hoursOffset * 60) + (hoursOffset < 0 ? -minutesOffset : minutesOffset);
+                // The API format is "(GMT+03:00) Nairobi"
+                // Extract the city/region name part which is more reliable for Intl.DateTimeFormat
+                const locationMatch = timezone.match(/\) (.+)$/);
+                const location = locationMatch ? locationMatch[1] : null;
+                
+                // Map known locations to IANA timezones if needed, 
+                // but usually the specific offset + Intl is enough
+                const ianaTimeZone = location === 'Nairobi' ? 'Africa/Nairobi' : undefined;
+
+                if (ianaTimeZone) {
+                    const options: Intl.DateTimeFormatOptions = {
+                        timeZone: ianaTimeZone,
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: 'numeric', minute: '2-digit', hour12: true
+                    };
+                    const formatter = new Intl.DateTimeFormat('en-US', options);
+                    const parts = formatter.formatToParts(date);
                     
-                    // Create a UTC-relative date and add the offset
-                    const utcMs = date.getTime() + (date.getTimezoneOffset() * 60000);
-                    date = new Date(utcMs + (totalOffsetMinutes * 60000));
+                    const now = new Date();
+                    const localNowString = new Intl.DateTimeFormat('en-US', { timeZone: ianaTimeZone, year: 'numeric', month: 'numeric', day: 'numeric' }).format(now);
+                    const localTxString = new Intl.DateTimeFormat('en-US', { timeZone: ianaTimeZone, year: 'numeric', month: 'numeric', day: 'numeric' }).format(date);
+                    
+                    const isToday = localNowString === localTxString;
+                    
+                    const timePart = `${parts.find(p => p.type === 'hour')?.value}:${parts.find(p => p.type === 'minute')?.value} ${parts.find(p => p.type === 'dayPeriod')?.value}`;
+                    
+                    if (isToday) return timePart;
+                    
+                    return `${parts.find(p => p.type === 'month')?.value} ${parts.find(p => p.type === 'day')?.value} at ${timePart}`;
                 }
             } catch (err) {
-                console.warn("Timezone calculation fallback", err);
+                console.warn("Timezone Intl fallback", err);
             }
         }
 
+        // Standard Fallback
         const now = new Date();
         const yesterday = new Date();
         yesterday.setDate(now.getDate() - 1);
-
         const isToday = date.toDateString() === now.toDateString();
         const isYesterday = date.toDateString() === yesterday.toDateString();
-
         const timeString = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-
         if (isToday) return timeString;
         if (isYesterday) return `Yesterday at ${timeString}`;
-        
-        return date.toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        }).replace(',', ' at');
+        return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }).replace(',', ' at');
     };
 
     return (

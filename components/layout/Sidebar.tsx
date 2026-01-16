@@ -388,7 +388,7 @@ const Sidebar: React.FC<{
             </button>
             <div className={`flex items-center h-20 px-6 ${isCollapsed ? 'justify-center' : ''}`}>
                 <CircleDollarSign size={32} className="text-primary flex-shrink-0" />
-                {!isCollapsed && <h1 className="text-2xl font-bold text-primary ml-2 whitespace-nowrap">PesaFlow</h1>}
+                {!isCollapsed && <h1 className="text-2xl font-bold text-primary ml-2 whitespace-nowrap">Ongeza</h1>}
             </div>
             
             <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
