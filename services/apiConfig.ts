@@ -1,2 +1,2 @@
 // Centralized configuration for API endpoints.
-export const API_BASE_URL = 'https://4ae52a9c0898.ngrok-free.app';
+export const API_BASE_URL = 'https://b551edb24401.ngrok-free.app';
