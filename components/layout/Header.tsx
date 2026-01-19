@@ -52,7 +52,7 @@ const Header: React.FC = () => {
         }
       }
     } catch (error) {
-      // Catch network errors (like tunnel connection failures) silently to prevent intrusive console errors
+      // Catch network errors silenty to prevent intrusive console errors
       console.debug("Notification sync temporarily unavailable");
     } finally {
       setLoading(false);
@@ -97,22 +97,23 @@ const Header: React.FC = () => {
       .join(' ');
   };
 
-  // Logic for dynamic greeting
+  // Logic for dynamic greeting based on time of day and loginCount
   const getGreeting = () => {
     const hour = new Date().getHours();
-    let timeGreeting = "Good evening"; // Default for night/evening
+    let timeGreeting = "Good evening"; 
     if (hour >= 5 && hour < 12) {
       timeGreeting = "Good morning";
     } else if (hour >= 12 && hour < 17) {
       timeGreeting = "Good afternoon";
     }
 
-    // New user (First login)
+    // Check loginCount from user profile API mapped in AuthContext
+    // If loginCount is exactly 0, do not append "welcome back"
     if (user.loginCount === 0) {
       return `${timeGreeting}, ${user.firstName}!`;
     }
     
-    // Returning user
+    // Returning user (loginCount > 0)
     return `${timeGreeting} and welcome back, ${user.firstName}!`;
   };
 

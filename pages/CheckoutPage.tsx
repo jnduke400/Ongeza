@@ -137,7 +137,7 @@ const CheckoutPage: React.FC = () => {
 
     const { amount, selectedGoal } = state;
     const numericAmount = parseFloat(amount) || 0;
-    const estimatedFee = 1;
+    const estimatedFee = 0; // Fee set to 0 as instructed
     const currentProgress = selectedGoal ? (selectedGoal.currentAmount / selectedGoal.targetAmount) * 100 : 0;
     const expectedProgress = selectedGoal ? ((selectedGoal.currentAmount + numericAmount) / selectedGoal.targetAmount) * 100 : 0;
 
@@ -326,7 +326,7 @@ const CheckoutPage: React.FC = () => {
             </div>
             <div className="mt-12 flex items-center justify-center space-x-2 text-gray-400 text-xs font-medium opacity-80">
                 <Lock size={14} />
-                <span>Highly secured and encrypted by PesaFlow Bank</span>
+                <span>Highly secured and encrypted by Ongeza Bank</span>
             </div>
         </div>
     );

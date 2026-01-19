@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle, Eye, EyeOff, Check } from 'lucide-react';
+import { ArrowRight, CheckCircle, Eye, EyeOff, Check, Loader2 } from 'lucide-react';
 import { API_BASE_URL } from '../services/apiConfig';
 
-const RegistrationStep: React.FC<{ setStep: (step: number) => void }> = ({ setStep }) => {
+interface RegistrationData {
+    email: string;
+    challengeId: string;
+}
+
+const RegistrationStep: React.FC<{ onComplete: (data: RegistrationData) => void }> = ({ onComplete }) => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordsMatch, setPasswordsMatch] = useState(true);
@@ -31,7 +36,8 @@ const RegistrationStep: React.FC<{ setStep: (step: number) => void }> = ({ setSt
         const pin = (form.elements.namedItem('pin') as HTMLInputElement).value;
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+            // 1. Register User
+            const registerRes = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -46,15 +52,28 @@ const RegistrationStep: React.FC<{ setStep: (step: number) => void }> = ({ setSt
                 })
             });
 
-            const data = await response.json();
-
-            if (!response.ok || data.success === false) {
-                throw new Error(data.message || "Registration failed. Please try again.");
+            const registerResult = await registerRes.json();
+            if (!registerRes.ok || registerResult.success === false) {
+                throw new Error(registerResult.message || "Registration failed. Please try again.");
             }
             
-            // On success, move to OTP step as per existing flow.
-            // The API response doesn't give a challenge ID, so the OTP step will remain a mock for now.
-            setStep(2);
+            // 2. Initiate Email Verification OTP
+            const verifyRes = await fetch(`${API_BASE_URL}/api/v1/auth/verify-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const verifyResult = await verifyRes.json();
+            if (!verifyRes.ok || !verifyResult.success) {
+                throw new Error(verifyResult.message || "Failed to send verification OTP.");
+            }
+
+            // Pass the email and challengeId to the next step
+            onComplete({
+                email,
+                challengeId: verifyResult.data.challengeId
+            });
 
         } catch (err: any) {
             setError(err.message);
@@ -145,22 +164,103 @@ const RegistrationStep: React.FC<{ setStep: (step: number) => void }> = ({ setSt
     );
 };
 
-const OtpStep: React.FC<{ setStep: (step: number) => void }> = ({ setStep }) => {
-    const handleOtpSubmit = (e: React.FormEvent) => {
+const OtpStep: React.FC<{ 
+    registrationData: RegistrationData; 
+    onComplete: () => void;
+}> = ({ registrationData, onComplete }) => {
+    const [otp, setOtp] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [resendLoading, setResendLoading] = useState(false);
+
+    const handleOtpSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Mock success, move to success step
-        setStep(3);
+        setError('');
+        if (otp.length !== 6) return;
+
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/auth/confirm-verify-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    challengeId: registrationData.challengeId,
+                    otp: otp
+                })
+            });
+
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || "OTP verification failed. Please check the code and try again.");
+            }
+
+            // On success, move to success step
+            onComplete();
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResend = async () => {
+        setResendLoading(true);
+        setError('');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: registrationData.email })
+            });
+
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || "Failed to resend OTP.");
+            }
+            alert("A new verification code has been sent to your email.");
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setResendLoading(false);
+        }
     };
 
     return (
         <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Verify Your Account</h2>
-            <p className="text-gray-600 mb-6">Enter the 6-digit code sent to your mobile number.</p>
+            <p className="text-gray-600 mb-6">Enter the 6-digit code sent to <span className="font-semibold">{registrationData.email}</span>.</p>
+            
+            {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm" role="alert">{error}</div>}
+
             <form onSubmit={handleOtpSubmit} className="space-y-4 max-w-sm mx-auto">
-                <input type="text" maxLength={6} required autoFocus className="w-full text-center tracking-[1em] text-2xl font-bold px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
-                <p className="text-sm text-gray-500">Didn't receive code? <button type="button" className="font-medium text-primary hover:underline">Resend</button></p>
-                <button type="submit" className="w-full flex justify-center items-center bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-md transition-colors duration-300">
-                    Verify Account
+                <input 
+                    type="text" 
+                    maxLength={6} 
+                    required 
+                    autoFocus 
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                    className="w-full text-center tracking-[1em] text-2xl font-bold px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" 
+                />
+                
+                <p className="text-sm text-gray-500">
+                    Didn't receive code?{' '}
+                    <button 
+                        type="button" 
+                        onClick={handleResend}
+                        disabled={resendLoading || loading}
+                        className="font-medium text-primary hover:underline disabled:opacity-50"
+                    >
+                        {resendLoading ? 'Resending...' : 'Resend'}
+                    </button>
+                </p>
+
+                <button 
+                    type="submit" 
+                    disabled={loading || otp.length !== 6}
+                    className="w-full flex justify-center items-center bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-md transition-colors duration-300 disabled:bg-primary-light"
+                >
+                    {loading ? <Loader2 className="animate-spin" /> : 'Verify Account'}
                 </button>
             </form>
         </div>
@@ -183,6 +283,7 @@ const SuccessStep: React.FC = () => {
 
 const OnboardingPage: React.FC = () => {
     const [step, setStep] = useState(1);
+    const [regData, setRegData] = useState<RegistrationData | null>(null);
     
     const STEPS = [
         { title: 'Account Details', number: 1 },
@@ -192,9 +293,21 @@ const OnboardingPage: React.FC = () => {
     const renderContent = () => {
         switch (step) {
             case 1:
-                return <RegistrationStep setStep={setStep} />;
+                return (
+                    <RegistrationStep 
+                        onComplete={(data) => {
+                            setRegData(data);
+                            setStep(2);
+                        }} 
+                    />
+                );
             case 2:
-                return <OtpStep setStep={setStep} />;
+                return (
+                    <OtpStep 
+                        registrationData={regData!} 
+                        onComplete={() => setStep(3)} 
+                    />
+                );
             case 3:
                 return <SuccessStep />;
             default:
