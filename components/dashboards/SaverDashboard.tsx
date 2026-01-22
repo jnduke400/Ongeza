@@ -304,7 +304,7 @@ const StatisticsChartCard: React.FC<{ chartData: any[], currency: string }> = ({
                     <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                         <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 12, fill: '#6B7280' }} axisLine={false} tickLine={false} tickFormatter={(value) => `${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`} />
+                        <YAxis hide />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#d1d5db', strokeWidth: 1, strokeDasharray: '3 3' }} />
                         <Line type="monotone" dataKey="earnings" stroke="#6366f1" strokeWidth={2} dot={false} activeDot={{ r: 6, fill: '#6366f1', stroke: 'white', strokeWidth: 2 }} />
                         <Line type="monotone" dataKey="savings" stroke="#ec4899" strokeWidth={2} dot={false} activeDot={{ r: 6, fill: '#ec4899', stroke: 'white', strokeWidth: 2 }} />
@@ -342,7 +342,7 @@ const GoalCard: React.FC<{ iconStr: string; title: string; subtitle: string; cur
     );
 };
 
-const RightSidebarContent: React.FC<{ transactions: any[], currency: string, timezone?: string }> = ({ transactions, currency, timezone }) => {
+const RightSidebarContent: React.FC<{ transactions: any[], currency: string, totalSavings: number, timezone?: string }> = ({ transactions, currency, totalSavings, timezone }) => {
     const getStatusColor = (status: string) => {
         const normalizedStatus = status ? status.toUpperCase() : '';
         switch (normalizedStatus) {
@@ -362,12 +362,8 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string, tim
         if (timezone) {
             try {
                 // The API format is "(GMT+03:00) Nairobi"
-                // Extract the city/region name part which is more reliable for Intl.DateTimeFormat
                 const locationMatch = timezone.match(/\) (.+)$/);
                 const location = locationMatch ? locationMatch[1] : null;
-                
-                // Map known locations to IANA timezones if needed, 
-                // but usually the specific offset + Intl is enough
                 const ianaTimeZone = location === 'Nairobi' ? 'Africa/Nairobi' : undefined;
 
                 if (ianaTimeZone) {
@@ -384,11 +380,8 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string, tim
                     const localTxString = new Intl.DateTimeFormat('en-US', { timeZone: ianaTimeZone, year: 'numeric', month: 'numeric', day: 'numeric' }).format(date);
                     
                     const isToday = localNowString === localTxString;
-                    
                     const timePart = `${parts.find(p => p.type === 'hour')?.value}:${parts.find(p => p.type === 'minute')?.value} ${parts.find(p => p.type === 'dayPeriod')?.value}`;
-                    
                     if (isToday) return timePart;
-                    
                     return `${parts.find(p => p.type === 'month')?.value} ${parts.find(p => p.type === 'day')?.value} at ${timePart}`;
                 }
             } catch (err) {
@@ -396,7 +389,6 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string, tim
             }
         }
 
-        // Standard Fallback
         const now = new Date();
         const yesterday = new Date();
         yesterday.setDate(now.getDate() - 1);
@@ -409,19 +401,29 @@ const RightSidebarContent: React.FC<{ transactions: any[], currency: string, tim
     };
 
     return (
-        <Card>
+        <Card className="relative overflow-hidden">
             <h3 className="font-bold text-lg text-gray-800 mb-4">Linked Cards</h3>
+            
             <div className="relative h-48 flex items-center justify-center">
-                <div className="absolute w-full max-w-xs h-44 bg-yellow-300 rounded-xl transform rotate-6"></div>
-                <div className="absolute w-full max-w-xs h-44 bg-green-300 rounded-xl transform rotate-3"></div>
+                <div className="absolute w-full max-w-xs h-44 bg-yellow-300 rounded-xl transform rotate-6 opacity-80"></div>
+                <div className="absolute w-full max-w-xs h-44 bg-green-300 rounded-xl transform rotate-3 opacity-80"></div>
                 <div className="absolute w-full max-w-xs h-44 bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl p-4 text-white flex flex-col justify-between shadow-lg">
                     <div className="flex justify-between items-start">
-                        <div><p className="text-3xl font-bold">TZS 410,274</p><p className="text-sm opacity-80">Debit Card</p></div>
+                        <div><p className="text-3xl font-bold">{currency} {totalSavings.toLocaleString()}</p><p className="text-sm opacity-80">Debit Card</p></div>
                         <div className="flex -space-x-2"><div className="w-6 h-6 rounded-full bg-red-400 border-2 border-pink-500"></div><div className="w-6 h-6 rounded-full bg-yellow-300 opacity-90 border-2 border-pink-500"></div></div>
                     </div>
                     <div className="flex justify-between items-end"><span className="font-mono text-sm opacity-80">**** 1973</span><div className="w-8 h-6 bg-white/20 rounded"></div></div>
                 </div>
+
+                {/* Overlay shadow and button */}
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] rounded-2xl z-20 flex items-center justify-center">
+                    <button className="bg-white/90 hover:bg-white text-gray-800 font-bold py-2.5 px-6 rounded-xl shadow-lg border border-gray-100 flex items-center space-x-2 transition-all active:scale-95 group">
+                        <Plus size={18} className="text-primary group-hover:rotate-90 transition-transform duration-300" />
+                        <span>Link a new card</span>
+                    </button>
+                </div>
             </div>
+
             <div className="flex justify-between items-center mt-8 mb-6"><h3 className="font-bold text-lg text-gray-800">Recent Transactions</h3><Link to="/activity" className="text-sm text-blue-500 font-medium hover:underline">See All</Link></div>
             <div className="space-y-6">
                 {transactions.length === 0 ? (<p className="text-gray-500 text-sm text-center">No recent transactions.</p>) : (transactions.map((tx) => (
@@ -447,16 +449,11 @@ const SaverDashboard: React.FC = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // Fetch the latest user profile to refresh goals count and rate used by the banner
-                // This call also updates the 'user' object in context which contains the timezone
                 await refreshUserProfile();
-
                 const response = await interceptedFetch(`${API_BASE_URL}/api/v1/savings/dashboard`);
                 const data = await response.json();
                 if (data.success) {
                     setDashboardData(data.data);
-                    
-                    // Trigger first-login animation if loginCount from Auth context is exactly 1
                     if (user?.loginCount === 1 && !sessionStorage.getItem('firstLoginCelebrated')) {
                         setShowCelebration(true);
                         sessionStorage.setItem('firstLoginCelebrated', 'true');
@@ -469,7 +466,7 @@ const SaverDashboard: React.FC = () => {
             }
         };
         fetchDashboardData();
-    }, [user?.id]); // Depend on user id to refresh when switching users, but mainly for mount
+    }, [user?.id]);
 
     const chartData = useMemo(() => {
         if (!dashboardData?.chartData) return [];
@@ -516,10 +513,10 @@ const SaverDashboard: React.FC = () => {
                     </div>
                 </div>
                 <div className="lg:col-span-1 space-y-6 xl:space-y-8">
-                    {/* FIX: Cast user object to 'any' to resolve 'Property timezone does not exist' compilation error. */}
                     <RightSidebarContent 
                         transactions={recentTransactions.slice(0, 5)} 
                         currency={summary.currency} 
+                        totalSavings={summary.totalSavings}
                         timezone={(user as any)?.timezone}
                     />
                 </div>
