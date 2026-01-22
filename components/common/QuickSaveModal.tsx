@@ -97,6 +97,8 @@ export const QuickSaveModal: React.FC<{
         onClose();
     };
 
+    const isInputValid = selectedGoal && amount && !loading && !isGoalComplete;
+
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
             <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col p-8 sm:p-10 border border-gray-100">
@@ -208,8 +210,14 @@ export const QuickSaveModal: React.FC<{
                 <div className="mt-10 space-y-6">
                     <button 
                         onClick={handleCreateOrder} 
-                        disabled={!selectedGoal || !amount || loading || isGoalComplete} 
-                        className={`w-full font-bold py-4 rounded-[20px] shadow-xl transition-all active:scale-[0.97] text-base ${isGoalComplete ? 'bg-emerald-100 text-emerald-600 shadow-emerald-50 cursor-default' : 'bg-gray-100 text-gray-300 disabled:bg-gray-50 disabled:text-gray-200 disabled:shadow-none hover:bg-indigo-600 hover:text-white shadow-indigo-100/50'}`}
+                        disabled={!isInputValid} 
+                        className={`w-full font-bold py-4 rounded-[20px] shadow-xl transition-all active:scale-[0.97] text-base ${
+                            isGoalComplete 
+                                ? 'bg-emerald-100 text-emerald-600 shadow-emerald-50 cursor-default' 
+                                : !isInputValid 
+                                    ? 'bg-gray-50 text-gray-200 shadow-none cursor-not-allowed' 
+                                    : 'bg-indigo-600 text-white shadow-indigo-100/50 hover:bg-indigo-700'
+                        }`}
                     >
                         {isGoalComplete ? "Goal complete" : "Create order"}
                     </button>

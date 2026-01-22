@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // FIX: Using namespace import for react-router-dom to handle potential module resolution issues.
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LandingPage from './pages/LandingPage';
 import OnboardingPage from './pages/OnboardingPage';
@@ -75,6 +75,7 @@ import SessionExpiryModal from './components/common/SessionExpiryModal';
 import OnboardingStatusPage from './pages/OnboardingStatusPage';
 import MessagesPage from './pages/MessagesPage';
 import TimelinePage from './pages/TimelinePage';
+import { ChevronLeft } from 'lucide-react';
 
 // A wrapper for protected routes
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -131,6 +132,28 @@ const AppContent: React.FC = () => {
             <Route path="/force-password-change" element={<PublicRoute><ForcePasswordChangePage /></PublicRoute>} />
             <Route path="/reset-pin" element={<PublicRoute><ResetPinPage /></PublicRoute>} />
             <Route path="/verify-pin" element={<PinVerificationPage />} />
+            <Route path="/contact-us" element={
+                <div className="bg-gray-50 min-h-screen py-12 px-4">
+                    <div className="max-w-6xl mx-auto mb-8">
+                        <Link to="/" className="flex items-center text-primary font-bold hover:underline transition-all">
+                            <ChevronLeft size={20} className="mr-1" />
+                            Back to Home
+                        </Link>
+                    </div>
+                    <ContactPage />
+                </div>
+            } />
+            <Route path="/all-faqs" element={
+                <div className="bg-gray-50 min-h-screen py-12 px-4">
+                    <div className="max-w-6xl mx-auto mb-8">
+                        <Link to="/" className="flex items-center text-primary font-bold hover:underline transition-all">
+                            <ChevronLeft size={20} className="mr-1" />
+                            Back to Home
+                        </Link>
+                    </div>
+                    <FaqPage />
+                </div>
+            } />
             
             {/* Post-login, mandatory onboarding for savers */}
             <Route 

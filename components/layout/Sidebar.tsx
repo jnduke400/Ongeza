@@ -391,7 +391,7 @@ const Sidebar: React.FC<{
                 {!isCollapsed && <h1 className="text-2xl font-bold text-primary ml-2 whitespace-nowrap">Ongeza</h1>}
             </div>
             
-            <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto scrollbar-hide">
                 {!isCollapsed && <h2 className="px-4 mb-2 text-sm font-semibold text-gray-400">General</h2>}
                 {navItemsToRender.map(item => {
                     if ('isCollapsible' in item) {
