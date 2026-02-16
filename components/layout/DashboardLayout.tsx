@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -9,6 +7,7 @@ import TwoFactorAuthBadge from './TwoFactorAuthBadge';
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -16,6 +15,8 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
       setIsMobile(mobile);
       if (mobile) {
         setIsCollapsed(true);
+      } else {
+        setIsMobileMenuOpen(false); // Close mobile menu if we resize to desktop
       }
     };
 
@@ -29,11 +30,17 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   return (
     <div className="bg-background min-h-screen">
-      <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+      <Sidebar 
+        isCollapsed={isCollapsed} 
+        setIsCollapsed={setIsCollapsed} 
+        isMobile={isMobile}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+      />
       <div className={`transition-all duration-300 ${mainContentPadding}`}>
         <div className="flex flex-col h-screen">
           <div className="h-1 bg-gray-900"></div>
-          <Header />
+          <Header onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} isMobile={isMobile} />
           <PinSetupBadge />
           <TwoFactorAuthBadge />
           <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background">

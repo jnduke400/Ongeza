@@ -1,21 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Bell, Search, Mail, Loader2, ShieldCheck } from 'lucide-react';
+import { Bell, Search, Mail, Loader2, ShieldCheck, Menu } from 'lucide-react';
 import { UserRole } from '../../types';
 import { API_BASE_URL } from '../../services/apiConfig';
 import { interceptedFetch } from '../../services/api';
 
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  type: string;
-  read: boolean;
-  createdAt: string;
+interface HeaderProps {
+  onMenuToggle: () => void;
+  isMobile?: boolean;
 }
 
-const Header: React.FC = () => {
+const Header: React.FC<HeaderProps> = ({ onMenuToggle, isMobile }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -123,9 +119,20 @@ const Header: React.FC = () => {
   return (
     <header className="flex items-center justify-between h-20 px-6 bg-background">
       <div className="flex items-center">
-        <h1 className="text-2xl font-bold text-on-surface">{getGreeting()}</h1>
+        {isMobile && (
+          <button 
+            onClick={onMenuToggle}
+            className="p-2 mr-3 -ml-2 text-gray-500 hover:bg-gray-200 rounded-lg transition-colors"
+            aria-label="Toggle mobile menu"
+          >
+            <Menu size={24} />
+          </button>
+        )}
+        <h1 className="text-xl sm:text-2xl font-bold text-on-surface truncate max-w-[200px] sm:max-w-none">
+          {getGreeting()}
+        </h1>
       </div>
-      <div className="flex items-center space-x-5">
+      <div className="flex items-center space-x-2 sm:space-x-5">
         <button className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors">
           <Search size={22} />
         </button>
@@ -143,7 +150,7 @@ const Header: React.FC = () => {
           </button>
 
           {isNotificationOpen && (
-            <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl z-50 border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="absolute right-0 mt-3 w-72 sm:w-80 bg-white rounded-xl shadow-2xl z-50 border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="p-4 flex justify-between items-center border-b border-gray-50 bg-gray-50/30">
                 <h3 className="font-bold text-gray-800">Notification</h3>
                 <div className="flex items-center space-x-3">
@@ -237,9 +244,9 @@ const Header: React.FC = () => {
             </div>
           )}
         </div>
-        <div className="flex items-center space-x-3 border-l border-gray-200 pl-5">
-          <img className="h-10 w-10 rounded-full object-cover shadow-sm ring-2 ring-white" src={user.avatar} alt="User avatar" />
-          <div className="hidden sm:block">
+        <div className="flex items-center space-x-3 border-l border-gray-200 pl-3 sm:pl-5">
+          <img className="h-9 w-9 sm:h-10 sm:h-10 rounded-full object-cover shadow-sm ring-2 ring-white" src={user.avatar} alt="User avatar" />
+          <div className="hidden md:block">
             <p className="font-bold text-sm text-gray-800 leading-tight">{user.firstName} {user.lastName}</p>
             <p className="text-[11px] text-gray-400 tracking-wider mt-0.5">{formatRole(user.role)}</p>
           </div>

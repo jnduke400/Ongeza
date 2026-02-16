@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 // FIX: Using namespace import for react-router-dom to handle potential module resolution issues.
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,7 +22,8 @@ import {
     ClipboardList,
     Briefcase,
     FileText,
-    Mail
+    Mail,
+    X
 } from 'lucide-react';
 
 // For simple, non-collapsible navigation links
@@ -41,13 +42,14 @@ interface CollapsibleNavItem {
 }
 
 
-const NavLink: React.FC<{ item: NavItem, isCollapsed: boolean }> = ({ item, isCollapsed }) => {
+const NavLink: React.FC<{ item: NavItem, isCollapsed: boolean, onClick?: () => void }> = ({ item, isCollapsed, onClick }) => {
     const location = useLocation();
     const isActive = location.pathname === item.href;
 
     return (
         <Link
             to={item.href}
+            onClick={onClick}
             className={`relative flex items-center px-4 py-2.5 rounded-lg transition-colors duration-200 group ${
                 isActive
                     ? 'bg-emerald-50 text-primary font-semibold'
@@ -66,7 +68,7 @@ const NavLink: React.FC<{ item: NavItem, isCollapsed: boolean }> = ({ item, isCo
     );
 }
 
-const CollapsibleMenu: React.FC<{ item: CollapsibleNavItem, isCollapsed: boolean }> = ({ item, isCollapsed }) => {
+const CollapsibleMenu: React.FC<{ item: CollapsibleNavItem, isCollapsed: boolean, onItemClick?: () => void }> = ({ item, isCollapsed, onItemClick }) => {
     const location = useLocation();
     const isParentActive = item.children.some(child => location.pathname.startsWith(child.href));
     const [isOpen, setIsOpen] = useState(isParentActive);
@@ -104,6 +106,7 @@ const CollapsibleMenu: React.FC<{ item: CollapsibleNavItem, isCollapsed: boolean
                             <Link
                                 key={child.label}
                                 to={child.href}
+                                onClick={onItemClick}
                                 className={`relative flex items-center pl-12 pr-4 py-2 rounded-lg text-sm transition-colors duration-200 group ${
                                     isActive ? 'text-primary font-semibold' : 'text-gray-500 hover:text-primary'
                                 }`}
@@ -123,9 +126,19 @@ const CollapsibleMenu: React.FC<{ item: CollapsibleNavItem, isCollapsed: boolean
 const Sidebar: React.FC<{
     isCollapsed: boolean;
     setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
-}> = ({ isCollapsed, setIsCollapsed }) => {
+    isMobile?: boolean;
+    isMobileMenuOpen?: boolean;
+    setIsMobileMenuOpen?: React.Dispatch<React.SetStateAction<boolean>>;
+}> = ({ isCollapsed, setIsCollapsed, isMobile, isMobileMenuOpen, setIsMobileMenuOpen }) => {
     const { user, logout } = useAuth();
-    const isMobile = window.innerWidth < 1024;
+    const location = useLocation();
+
+    // Close mobile menu on location change
+    useEffect(() => {
+        if (isMobile && setIsMobileMenuOpen) {
+            setIsMobileMenuOpen(false);
+        }
+    }, [location.pathname]);
 
     const generalNavItems: (NavItem | CollapsibleNavItem)[] = [
         { href: '/dashboard', icon: <Home size={20} />, label: 'Dashboard' },
@@ -372,53 +385,84 @@ const Sidebar: React.FC<{
     }, [user]);
 
     const sidebarClasses = `
-        fixed inset-y-0 left-0 z-30 flex flex-col bg-white border-r border-gray-200 transition-all duration-300
-        ${isCollapsed ? 'w-20' : 'w-64'}
-        ${isMobile && !isCollapsed ? 'shadow-xl' : ''}
+        fixed inset-y-0 left-0 z-40 flex flex-col bg-white border-r border-gray-200 transition-all duration-300
+        ${isMobile 
+            ? (isMobileMenuOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full') 
+            : (isCollapsed ? 'w-20 translate-x-0' : 'w-64 translate-x-0')}
+        ${isMobile && isMobileMenuOpen ? 'shadow-2xl' : ''}
     `;
 
-    return (
-        <div className={sidebarClasses}>
-             <button 
-                onClick={() => setIsCollapsed(prev => !prev)}
-                className="absolute -right-4 top-20 z-10 bg-white border-2 border-gray-200 rounded-full p-1 shadow-md hover:bg-gray-100 transition-colors"
-                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-                {isCollapsed ? <ChevronRight size={16} className="text-gray-600" /> : <ChevronLeft size={16} className="text-gray-600" />}
-            </button>
-            <div className={`flex items-center h-20 px-6 ${isCollapsed ? 'justify-center' : ''}`}>
-                <CircleDollarSign size={32} className="text-primary flex-shrink-0" />
-                {!isCollapsed && <h1 className="text-2xl font-bold text-primary ml-2 whitespace-nowrap">Ongeza</h1>}
-            </div>
-            
-            <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto scrollbar-hide">
-                {!isCollapsed && <h2 className="px-4 mb-2 text-sm font-semibold text-gray-400">General</h2>}
-                {navItemsToRender.map(item => {
-                    if ('isCollapsible' in item) {
-                        return <CollapsibleMenu key={item.label} item={item} isCollapsed={isCollapsed} />;
-                    }
-                    return <NavLink key={item.label} item={item} isCollapsed={isCollapsed} />;
-                })}
-                
-                {!isCollapsed && <div className="pt-4"><h2 className="px-4 mb-2 text-sm font-semibold text-gray-400">Other</h2></div>}
-                {otherNavItemsToRender.map(item => {
-                    if ('isCollapsible' in item) {
-                        return <CollapsibleMenu key={item.label} item={item} isCollapsed={isCollapsed} />;
-                    }
-                    return <NavLink key={item.label} item={item} isCollapsed={isCollapsed} />;
-                })}
-            </nav>
+    const handleItemClick = () => {
+        if (isMobile && setIsMobileMenuOpen) {
+            setIsMobileMenuOpen(false);
+        }
+    };
 
-            <div className="px-4 py-6 border-t border-gray-200">
-                <button 
-                    onClick={logout} 
-                    className={`w-full flex items-center px-4 py-2.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors duration-200 ${isCollapsed ? 'justify-center' : ''}`}
-                >
-                    <LogOut size={20} />
-                    {!isCollapsed && <span className="ml-4 font-medium">Log Out</span>}
-                </button>
+    return (
+        <>
+            {/* Backdrop for mobile */}
+            {isMobile && isMobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 backdrop-blur-sm"
+                    onClick={() => setIsMobileMenuOpen && setIsMobileMenuOpen(false)}
+                ></div>
+            )}
+
+            <div className={sidebarClasses}>
+                {!isMobile && (
+                    <button 
+                        onClick={() => setIsCollapsed(prev => !prev)}
+                        className="absolute -right-4 top-20 z-10 bg-white border-2 border-gray-200 rounded-full p-1 shadow-md hover:bg-gray-100 transition-colors"
+                        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                        {isCollapsed ? <ChevronRight size={16} className="text-gray-600" /> : <ChevronLeft size={16} className="text-gray-600" />}
+                    </button>
+                )}
+
+                {isMobile && (
+                    <button 
+                        onClick={() => setIsMobileMenuOpen && setIsMobileMenuOpen(false)}
+                        className="absolute right-4 top-6 text-gray-400 hover:text-gray-600"
+                        aria-label="Close menu"
+                    >
+                        <X size={24} />
+                    </button>
+                )}
+
+                <div className={`flex items-center h-20 px-6 ${isCollapsed && !isMobile ? 'justify-center' : ''}`}>
+                    <CircleDollarSign size={32} className="text-primary flex-shrink-0" />
+                    {(!isCollapsed || isMobile) && <h1 className="text-2xl font-bold text-primary ml-2 whitespace-nowrap">Ongeza</h1>}
+                </div>
+                
+                <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto scrollbar-hide">
+                    {(!isCollapsed || isMobile) && <h2 className="px-4 mb-2 text-sm font-semibold text-gray-400 uppercase tracking-widest text-[10px]">General</h2>}
+                    {navItemsToRender.map(item => {
+                        if ('isCollapsible' in item) {
+                            return <CollapsibleMenu key={item.label} item={item} isCollapsed={isCollapsed && !isMobile} onItemClick={handleItemClick} />;
+                        }
+                        return <NavLink key={item.label} item={item} isCollapsed={isCollapsed && !isMobile} onClick={handleItemClick} />;
+                    })}
+                    
+                    {(!isCollapsed || isMobile) && <div className="pt-4"><h2 className="px-4 mb-2 text-sm font-semibold text-gray-400 uppercase tracking-widest text-[10px]">Other</h2></div>}
+                    {otherNavItemsToRender.map(item => {
+                        if ('isCollapsible' in item) {
+                            return <CollapsibleMenu key={item.label} item={item} isCollapsed={isCollapsed && !isMobile} onItemClick={handleItemClick} />;
+                        }
+                        return <NavLink key={item.label} item={item} isCollapsed={isCollapsed && !isMobile} onClick={handleItemClick} />;
+                    })}
+                </nav>
+
+                <div className="px-4 py-6 border-t border-gray-200">
+                    <button 
+                        onClick={logout} 
+                        className={`w-full flex items-center px-4 py-2.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors duration-200 ${isCollapsed && !isMobile ? 'justify-center' : ''}`}
+                    >
+                        <LogOut size={20} />
+                        {(!isCollapsed || isMobile) && <span className="ml-4 font-medium">Log Out</span>}
+                    </button>
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 
